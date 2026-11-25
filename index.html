@@ -1,0 +1,3243 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نوالتي | نظام إدارة تجارة الخرشوف</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        cream: '#E9EFE6',
+        creamdark: '#D9E3D5',
+        leaf: { deep:'#19432B', mid:'#235C3B', bright:'#4BAF62', pale:'#D9E8D7', line:'#C0D5BD' },
+        gold: { DEFAULT:'#A57B36', light:'#EAD3A0', dark:'#8A652A' },
+        rust: { DEFAULT:'#C62828', light:'#FFCDD2' },
+        ink: '#14211A'
+      },
+      fontFamily: {
+        display: ['Lalezar','sans-serif'],
+        body: ['Tajawal','sans-serif']
+      },
+      boxShadow: {
+        card: '0 8px 30px rgba(22, 61, 36, 0.05), 0 2px 4px rgba(22, 61, 36, 0.02)',
+        'card-hover': '0 12px 40px rgba(22, 61, 36, 0.08), 0 4px 8px rgba(22, 61, 36, 0.04)'
+      }
+    }
+  }
+}
+</script>
+<style>
+  html,body{ background: #E9EFE6; min-height: 100vh; font-family:'Tajawal',sans-serif; color: #14211A; }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:#D1E0CD; border-radius:8px; transition: background 0.2s; }
+  ::-webkit-scrollbar-thumb:hover{ background:#205633; }
+  .ledger-lines{ background-image: repeating-linear-gradient(to bottom, transparent, transparent 38px, rgba(22,61,36,0.03) 39px); }
+  .num{ font-variant-numeric: tabular-nums; }
+  @keyframes riseIn { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+  .rise{ animation: riseIn .5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  input[type=checkbox]{ accent-color:#163D24; }
+  input, select, textarea { transition: all 0.2s; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: #163D24 !important; box-shadow: 0 0 0 2px rgba(22, 61, 36, 0.15) !important; }
+  button { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
+  button:active { transform: scale(0.97); }
+</style>
+</head>
+<body class="bg-cream text-ink">
+<div id="root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const {useState, useEffect} = React;
+
+/* ---------------------------------------------------------- ICONS ---------------------------------------------------------- */
+function Icon({name, className="w-5 h-5"}){
+  const p = {fill:"none", stroke:"currentColor", strokeWidth:"1.8", strokeLinecap:"round", strokeLinejoin:"round"};
+  switch(name){
+    case "grid": return <svg viewBox="0 0 24 24" className={className} {...p}><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg>;
+    case "receipt": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>;
+    case "truck": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M3 7h11v9H3z"/><path d="M14 11h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>;
+    case "user": return <svg viewBox="0 0 24 24" className={className} {...p}><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.5-4 4-6 7.5-6s6 2 7.5 6"/></svg>;
+    case "leaf": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M20 4C10 4 4 10 4 20c10 0 16-6 16-16Z"/><path d="M6 18 18 6"/></svg>;
+    case "blade": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M3 21 15 9"/><path d="M13 7l4-4 4 4-4 4z"/><path d="M9 15l3 3"/></svg>;
+    case "wallet": return <svg viewBox="0 0 24 24" className={className} {...p}><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14" r="1.1" fill="currentColor" stroke="none"/></svg>;
+    case "tag": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M12 3h6a2 2 0 0 1 2 2v6l-9 9-8-8 9-9Z"/><circle cx="15.5" cy="7.5" r="1.3"/></svg>;
+    case "users": return <svg viewBox="0 0 24 24" className={className} {...p}><circle cx="9" cy="8" r="3"/><path d="M2.5 20c1.2-3.5 3.3-5.3 6.5-5.3s5.3 1.8 6.5 5.3"/><circle cx="17" cy="8.5" r="2.3"/><path d="M15.5 14.8c2.4.3 3.9 1.9 4.9 5.2"/></svg>;
+    case "logout": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>;
+    case "plus": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M12 5v14M5 12h14"/></svg>;
+    case "trash": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>;
+    case "whatsapp": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M4 20l1.4-4.1A8 8 0 1 1 9 18.4Z"/><path d="M8.7 9.4c.2 2.6 2.3 4.7 4.9 4.9.6 0 1-.6.8-1.2l-.5-1a.7.7 0 0 0-.8-.3l-.9.3a5 5 0 0 1-2.4-2.4l.3-.9a.7.7 0 0 0-.3-.8l-1-.5c-.6-.2-1.2.2-1.1.9Z"/></svg>;
+    case "coin": return <svg viewBox="0 0 24 24" className={className} {...p}><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2c0-1 1-1.7 2.5-1.7s2.5.6 2.5 1.5-1 1.3-2.5 1.6-2.5.7-2.5 1.7 1 1.5 2.5 1.5 2.5-.6 2.5-1.6"/><path d="M12 6.3v1.2M12 16.5v1.2"/></svg>;
+    case "arrow": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M5 12h14M13 6l6 6-6 6"/></svg>;
+    case "check": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M4 12l5 5 11-11"/></svg>;
+    case "box": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M3 8l9-5 9 5-9 5-9-5Z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/></svg>;
+    case "edit": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M4 20h4l10.5-10.5-4-4L4 16v4Z"/><path d="M13 6.5l4 4"/></svg>;
+    case "download": return <svg viewBox="0 0 24 24" className={className} {...p}><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>;
+    case "debt": return <svg viewBox="0 0 24 24" className={className} {...p}><circle cx="12" cy="8" r="3"/><path d="M12 11v4"/><path d="M9.5 14.5h5"/><path d="M6 21c1-3.3 3.2-5.3 6-5.3s5 2 6 5.3"/></svg>;
+    default: return null;
+  }
+}
+
+function ArtichokeMark({className="w-16 h-16"}){
+  const rows = [
+    {cy:80, rx:32, ry:9,  n:9, len:32, wid:13, tone:'#33562F'},
+    {cy:66, rx:27, ry:8,  n:8, len:28, wid:12, tone:'#3D6144'},
+    {cy:52, rx:21, ry:7,  n:7, len:24, wid:11, tone:'#4C7A4E'},
+    {cy:39, rx:15, ry:5.5,n:6, len:19, wid:9,  tone:'#5C8B54'},
+    {cy:28, rx:8,  ry:3.5,n:5, len:14, wid:7,  tone:'#78A05A'},
+  ];
+  const petals = [];
+  rows.forEach((row,ri)=>{
+    for(let i=0;i<row.n;i++){
+      const t = (i + (ri%2?0.5:0)) / row.n;
+      const angle = t*360;
+      const rad = angle*Math.PI/180;
+      const cx = 50 + Math.cos(rad)*row.rx;
+      const cy = row.cy + Math.sin(rad)*row.ry;
+      const rot = angle+90;
+      const w = row.wid/2;
+      const l = row.len;
+      petals.push(
+        <path key={ri+'-'+i}
+          d={`M0 0 C ${-w} ${-l*0.35} ${-w} ${-l*0.75} 0 ${-l} C ${w} ${-l*0.75} ${w} ${-l*0.35} 0 0 Z`}
+          transform={`translate(${cx} ${cy}) rotate(${rot})`}
+          fill={row.tone} stroke="#1F3524" strokeWidth="0.6" strokeOpacity="0.5"/>
+      );
+    }
+  });
+  return (
+    <svg viewBox="0 0 100 100" className={className}>
+      <path d="M46 89 Q50 98 54 89" stroke="#6B4A24" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+      {petals}
+      <ellipse cx="50" cy="21" rx="5" ry="7" fill="#8FB56C"/>
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------- HELPERS ---------------------------------------------------------- */
+/* ---------------------------------------------------------- API CONNECTION ---------------------------------------------------------- */
+// غيّر الرابط ده بعد ما ترفع السيرفر بتاعك (Render/Railway)، دلوقتي مظبوط للتجربة المحلية
+const API_BASE = 'http://localhost:3001';
+
+function getToken(){ return localStorage.getItem('nawalty_token'); }
+function setToken(t){ if(t) localStorage.setItem('nawalty_token', t); else localStorage.removeItem('nawalty_token'); }
+
+function localStoreGet(key, def=[]){
+  try {
+    const d = localStorage.getItem('nawalty_db_' + key);
+    return d ? JSON.parse(d) : def;
+  } catch(e) { return def; }
+}
+function localStoreSet(key, val){
+  try { localStorage.setItem('nawalty_db_' + key, JSON.stringify(val)); } catch(e){}
+}
+
+/* ---------- الوضع المحلي (LocalStorage) ---------- */
+let LOCAL_MODE = false; // بيبقى true لما السيرفر مش متاح ونشتغل على المتصفح
+
+// كل المفاتيح المحلية اللي فيها قوائم أشخاص (جلابة، مصانع، عاملات نوالة...)
+function allLocalListKeys(){
+  const keys = [];
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith('nawalty_db_') && k !== 'nawalty_db_user' && k !== 'nawalty_db_prices') keys.push(k.replace('nawalty_db_',''));
+  }
+  return keys;
+}
+// مفاتيح التخزين اللي ممكن يكون فيها شخص من نوع معين
+function localKeysFor(mainKey){
+  if(mainKey === 'sakina-workers') return allLocalListKeys().filter(k=>k.startsWith('sakina_workers_'));
+  return [mainKey];
+}
+// تعديل/حذف عنصر فرعي (قيد، دفعة، حركة عدة...) بالـ id في أي قائمة محلية
+function localMutateNested(subKey, itemId, method, body){
+  for(const key of allLocalListKeys()){
+    const list = localStoreGet(key, []);
+    if(!Array.isArray(list)) continue;
+    let found = null;
+    const next = list.map(p=>{
+      const sub = p && Array.isArray(p[subKey]) ? p[subKey] : null;
+      if(!sub || !sub.some(x=>x.id===itemId)) return p;
+      if(method === 'PUT'){
+        const updated = sub.map(x=> x.id===itemId ? {...x, ...body, id:itemId} : x);
+        found = updated.find(x=>x.id===itemId);
+        return {...p, [subKey]: updated};
+      }
+      found = {ok:true};
+      return {...p, [subKey]: sub.filter(x=>x.id!==itemId)};
+    });
+    if(found){ localStoreSet(key, next); return found; }
+  }
+  return null;
+}
+// تحويل أسماء المسارات الفرعية لاسم الحقل المخزّن
+const NESTED_ROUTES = {
+  'equipment-factory-movements': 'factoryMovements',
+  'equipment-other': 'other',
+};
+function nestedSubKey(seg){
+  if(NESTED_ROUTES[seg]) return NESTED_ROUTES[seg];
+  if(seg.endsWith('-entries')) return 'entries';
+  if(seg.endsWith('-payments')) return 'payments';
+  return null;
+}
+
+async function apiFetchLocal(path, options={}){
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body ? JSON.parse(options.body) : {};
+
+  if(path === '/api/me'){
+    return localStoreGet('user', { name: 'صاحب النوالة (وضع محلي)', capital: 0, owner_phone: '' });
+  }
+  if(path === '/api/login' || path === '/api/register'){
+    const user = {...localStoreGet('user', {capital: 0, owner_phone: ''}), name: body.name || localStoreGet('user', {}).name || body.username || 'صاحب النوالة'};
+    localStoreSet('user', user);
+    setToken('local-demo-token');
+    return { token: 'local-demo-token', nawala: user };
+  }
+  if(path === '/api/nawala' && method === 'PUT'){
+    const user = {...localStoreGet('user', {}), ...body};
+    localStoreSet('user', user);
+    return user;
+  }
+
+  const parts = path.replace(/^\/api\//, '').split('/');
+  const mainKey = parts[0];
+
+  if(mainKey === 'prices'){
+    let prices = localStoreGet('prices', []);
+    if(method === 'GET') return prices;
+    if(method === 'PUT'){
+      const same = p => {
+        if(p.scope !== body.scope) return false;
+        if(body.scope === 'season') return true;
+        if(body.scope === 'week') return normalizeWeekStart(p.week_start) === normalizeWeekStart(body.week_start);
+        return p.week_start === body.week_start;
+      };
+      prices = prices.filter(p=>!same(p));
+      prices.push(body);
+      localStoreSet('prices', prices);
+      return body;
+    }
+  }
+
+  // تعديل/حذف قيد أو دفعة أو حركة عدة: /api/<x>-entries/<id>
+  if(parts.length === 2 && nestedSubKey(parts[0]) && (method === 'PUT' || method === 'DELETE')){
+    const res = localMutateNested(nestedSubKey(parts[0]), parts[1], method, body);
+    if(res) return res;
+    if(method === 'DELETE') return { ok: true };
+    throw new Error('العملية دي مش موجودة في البيانات المحفوظة');
+  }
+
+  // عاملات النوالة: /api/sakinas/<id>/workers
+  if(mainKey === 'sakinas' && parts.length === 3 && parts[2] === 'workers'){
+    const key = 'sakina_workers_' + parts[1];
+    const wList = localStoreGet(key, []);
+    if(method === 'GET') return wList;
+    if(method === 'POST'){
+      const item = { id: uid(), name: body.name, entries: [], payments: [] };
+      wList.push(item);
+      localStoreSet(key, wList);
+      return item;
+    }
+  }
+  // حذف نوالة = حذف عاملاتها كمان
+  if(mainKey === 'sakinas' && parts.length === 2 && method === 'DELETE'){
+    localStorage.removeItem('nawalty_db_sakina_workers_' + parts[1]);
+  }
+
+  // العدة: حركات المصانع / الأماكن الأخرى / رصيد النوالات
+  if(mainKey === 'equipment' && parts.length >= 3){
+    let eq = localStoreGet('equipment', []);
+    const itemId = parts[1];
+    let result = null;
+    eq = eq.map(it=>{
+      if(it.id !== itemId) return it;
+      if(parts[2] === 'factory-movements' && method === 'POST'){
+        result = { id: uid(), ...body };
+        return {...it, factoryMovements: [...(it.factoryMovements||[]), result]};
+      }
+      if(parts[2] === 'other' && method === 'POST'){
+        result = { id: uid(), ...body };
+        return {...it, other: [...(it.other||[]), result]};
+      }
+      if(parts[2] === 'sakina-stock' && parts[3] && method === 'PUT'){
+        const stock = it.sakinaStock || [];
+        const exists = stock.find(s=>s.sakina_id === parts[3]);
+        result = exists ? {...exists, qty: body.qty} : { id: uid(), sakina_id: parts[3], qty: body.qty };
+        return {...it, sakinaStock: exists ? stock.map(s=>s.sakina_id===parts[3]?result:s) : [...stock, result]};
+      }
+      return it;
+    });
+    if(!result) throw new Error('صنف العدة مش موجود');
+    localStoreSet('equipment', eq);
+    return result;
+  }
+
+  // إضافة قيد/دفعة لشخص: /api/<x>/<personId>/entries|payments
+  if(parts.length === 3 && (parts[2] === 'entries' || parts[2] === 'payments')){
+    const personId = parts[1];
+    const subType = parts[2];
+    const item = { id: uid(), ...body };
+    for(const key of localKeysFor(mainKey)){
+      const list = localStoreGet(key, []);
+      if(!list.some(p=>p.id===personId)) continue;
+      localStoreSet(key, list.map(p=> p.id===personId ? {...p, [subType]: [item, ...(p[subType]||[])]} : p));
+      return item;
+    }
+    throw new Error('الشخص ده مش موجود في البيانات المحفوظة');
+  }
+
+  // عمليات القائمة الأساسية: GET / POST / PUT / DELETE
+  if(mainKey === 'sakina-workers' && parts.length === 2){
+    for(const key of localKeysFor(mainKey)){
+      const list = localStoreGet(key, []);
+      if(!list.some(p=>p.id===parts[1])) continue;
+      if(method === 'DELETE'){ localStoreSet(key, list.filter(p=>p.id!==parts[1])); return { ok: true }; }
+      if(method === 'PUT'){
+        const next = list.map(p=>p.id===parts[1]?{...p, ...body}:p);
+        localStoreSet(key, next); return next.find(p=>p.id===parts[1]);
+      }
+    }
+    if(method === 'DELETE') return { ok: true };
+  }
+
+  let items = localStoreGet(mainKey, []);
+  if(method === 'GET') return items;
+  if(method === 'POST'){
+    const item = { id: uid(), entries: [], payments: [], ...body };
+    items.push(item);
+    localStoreSet(mainKey, items);
+    return item;
+  }
+  const itemId = parts[1];
+  if(method === 'PUT' && itemId){
+    items = items.map(x => {
+      if(x.id !== itemId) return x;
+      const merged = {...x, ...body};
+      if(body.weekly_prices || body.weeklyPrices) merged.weeklyPrices = body.weekly_prices || body.weeklyPrices;
+      delete merged.weekly_prices;
+      return merged;
+    });
+    localStoreSet(mainKey, items);
+    return items.find(x => x.id === itemId) || body;
+  }
+  if(method === 'DELETE' && itemId){
+    items = items.filter(x => x.id !== itemId);
+    localStoreSet(mainKey, items);
+    return { ok: true };
+  }
+
+  return Array.isArray(items) ? items : {};
+}
+
+async function apiFetch(path, options={}){
+  if(LOCAL_MODE) return apiFetchLocal(path, options);
+  const token = getToken();
+  const headers = { 'Content-Type':'application/json', ...(options.headers||{}) };
+  if(token) headers['Authorization'] = 'Bearer '+token;
+  let res;
+  try{
+    res = await fetch(API_BASE+path, {...options, headers});
+  }catch(networkErr){
+    // السيرفر مش شغال/مش متاح → نشتغل محلي على المتصفح
+    LOCAL_MODE = true;
+    return apiFetchLocal(path, options);
+  }
+  // السيرفر رد: أي خطأ منه (كلمة سر غلط، بيانات ناقصة...) يظهر للمستخدم ومايتحولش للمحلي
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'حصل خطأ من السيرفر');
+  return data;
+}
+
+const uid = () => Math.random().toString(36).slice(2,10);
+// تاريخ بالتوقيت المحلي (مصر) مش UTC — toISOString كانت بترجّع اليوم اللي قبله
+function localDateStr(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+const todayStr = () => localDateStr(new Date());
+const money = n => (Math.round((n||0)*100)/100).toLocaleString('en-US') + ' جنيه';
+const num = n => (Math.round((n||0)*100)/100).toLocaleString('en-US');
+
+// بداية الأسبوع = السبت
+function getWeekStart(dateStr){
+  const d = new Date((dateStr||todayStr())+'T00:00:00');
+  const day = d.getDay();
+  const diff = (day - 6 + 7) % 7;
+  d.setDate(d.getDate()-diff);
+  return localDateStr(d);
+}
+// النسخة القديمة كانت بتسجل بداية الأسبوع يوم جمعة (بسبب فرق التوقيت) — نحولها للسبت اللي بعدها
+function normalizeWeekStart(ws){
+  if(!ws) return ws;
+  const d = new Date(ws+'T00:00:00');
+  if(isNaN(d.getTime())) return ws;
+  if(d.getDay() === 5) d.setDate(d.getDate()+1);
+  return getWeekStart(localDateStr(d));
+}
+function normalizeWeeklyPrices(list){
+  const map = {};
+  (list||[]).forEach(w=>{ if(w && w.weekStart){ const ws = normalizeWeekStart(w.weekStart); map[ws] = {...w, weekStart: ws}; } });
+  return Object.values(map);
+}
+// قيم قديمة كانت متسجلة بأخطاء إملائية
+const LEGACY_VALUES = { 'أحضر':'أخضر', 'غيرذلك':'غير ذلك', 'النولة':'النوالة' };
+const fixLegacy = v => (typeof v === 'string' && LEGACY_VALUES[v]) ? LEGACY_VALUES[v] : v;
+const isGreenKind = k => k === 'أخضر' || k === 'أحضر';
+
+// تحميل جداول الأسعار (يومي/أسبوعي/موسمي) — بيتنادى أول ما التطبيق يفتح
+async function loadPriceTables(){
+  const rows = await apiFetch('/api/prices');
+  const priceDays = rows.filter(r=>r.scope==='day').map(r=>({ ...r.prices, day:r.week_start }));
+  const weekMap = {};
+  rows.filter(r=>r.scope==='week').forEach(r=>{ const ws = normalizeWeekStart(r.week_start); weekMap[ws] = { ...r.prices, weekStart: ws }; });
+  const seasonRow = rows.find(r=>r.scope==='season');
+  return { priceDays, priceWeeks: Object.values(weekMap), seasonPrices: seasonRow ? seasonRow.prices : null };
+}
+function getWeekRangeLabel(weekStart){
+  const s = new Date(weekStart+'T00:00:00');
+  const e = new Date(s); e.setDate(e.getDate()+6);
+  const fmt = dt => dt.toLocaleDateString('ar-EG',{day:'numeric',month:'numeric'});
+  return fmt(s)+' - '+fmt(e);
+}
+function isCurrentWeek(dateStr){ return getWeekStart(dateStr)===getWeekStart(todayStr()); }
+function formatDateWithDay(dateStr){
+  if(!dateStr) return '—';
+  const d = new Date(dateStr+'T00:00:00');
+  if(isNaN(d.getTime())) return dateStr;
+  const dayName = d.toLocaleDateString('ar-EG', {weekday:'long'});
+  const md = d.toLocaleDateString('ar-EG', {day:'numeric', month:'numeric'});
+  return dayName+' '+md;
+}
+function groupByWeek(entries){
+  const map = {};
+  entries.forEach(e=>{ const ws=getWeekStart(e.date); if(!map[ws]) map[ws]=[]; map[ws].push(e); });
+  return Object.keys(map).sort((a,b)=>b.localeCompare(a)).map(ws=>({
+    weekStart: ws, label: getWeekRangeLabel(ws),
+    items: map[ws].slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''))
+  }));
+}
+
+function waShare(text, phone){
+  const p = phone ? phone.replace(/[^0-9]/g,'') : '';
+  window.open('https://wa.me/'+p+'?text='+encodeURIComponent(text), '_blank');
+}
+function downloadTextFile(filename, text){
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ---------------------------------------------------------- PDF GENERATION ---------------------------------------------------------- */
+function pdfDocShell(innerHtml){
+  return `
+  <div style="direction:rtl; font-family:'Tajawal',sans-serif; width:760px; background:#fff; color:#23302B">
+    <div style="background:#25422C; padding:22px 28px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="color:#F6F3E9;">
+        <div style="font-size:26px; font-weight:900;">نوالتي</div>
+        <div style="font-size:12px; opacity:.75;">دفتر حسابات تجارة الخرشوف</div>
+      </div>
+      <div style="color:#F6F3E9; font-size:12px; opacity:.8;">تاريخ الإصدار: ${todayStr()}</div>
+    </div>
+    <div style="padding:26px 28px;">${innerHtml}</div>
+    <div style="padding:14px 28px; border-top:1px solid #eee; font-size:11px; color:#999;">تم إنشاؤه تلقائيًا بواسطة نظام نوالتي</div>
+  </div>`;
+}
+// منع الأسماء/الملاحظات اللي فيها رموز زي < > من تكسير الـ PDF
+function escHtml(v){ return String(v===undefined||v===null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function pdfTable(headers, rows){
+  const th = headers.map(h=>`<th style="border:1px solid #DDE7CE; background:#DDE7CE; padding:8px; font-size:12px; text-align:right;">${escHtml(h)}</th>`).join('');
+  const trs = rows.map(r=>`<tr>${r.map(c=>`<td style="border:1px solid #eee; padding:7px 8px; font-size:12px;">${escHtml(c)}</td>`).join('')}</tr>`).join('');
+  return `<table style="width:100%; border-collapse:collapse; margin:10px 0 18px;"><thead><tr>${th}</tr></thead><tbody>${trs||`<tr><td colspan="${headers.length}" style="padding:14px; text-align:center; color:#999; font-size:12px;">لا توجد بيانات</td></tr>`}</tbody></table>`;
+}
+async function renderHtmlToPdf(innerHtml){
+  const container = document.createElement('div');
+  container.style.position='fixed'; container.style.left='-99999px'; container.style.top='0'; container.style.zIndex='-1';
+  container.innerHTML = pdfDocShell(innerHtml);
+  document.body.appendChild(container);
+  let canvas, breaks, cssW, cssH;
+  try{
+    const target = container.firstElementChild;
+    const rect = target.getBoundingClientRect();
+    cssW = rect.width; cssH = rect.height;
+    // أماكن ينفع نقطع الصفحة عندها من غير ما نقسم صف في نص الجدول
+    breaks = [...target.querySelectorAll('tr, table, div')].map(el=>el.getBoundingClientRect().bottom - rect.top).filter(b=>b>0).sort((a,b)=>a-b);
+    // الكشوف الطويلة جدًا: نقلل الدقة عشان الصورة ماتعديش أقصى حجم يسمح بيه المتصفح
+    const scale = Math.max(0.6, Math.min(2, 30000 / Math.max(cssH,1)));
+    canvas = await html2canvas(target, {scale, backgroundColor:'#ffffff', useCORS:true});
+  } finally {
+    document.body.removeChild(container);
+  }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const pxScale = canvas.width / cssW;               // بكسل الصورة لكل بكسل CSS
+  const pagePx = cssW * pageHeight / pageWidth;      // طول الصفحة بوحدات CSS
+  let start = 0, first = true;
+  while(start < cssH - 1){
+    let end = Math.min(start + pagePx, cssH);
+    if(end < cssH){
+      const candidates = breaks.filter(b => b > start + pagePx*0.5 && b <= end);
+      if(candidates.length) end = candidates[candidates.length-1];
+    }
+    const slice = document.createElement('canvas');
+    slice.width = canvas.width;
+    slice.height = Math.ceil((end - start) * pxScale);
+    const ctx = slice.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,slice.width,slice.height);
+    ctx.drawImage(canvas, 0, Math.floor(start*pxScale), canvas.width, slice.height, 0, 0, canvas.width, slice.height);
+    if(!first) pdf.addPage();
+    pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, (end-start) * pageWidth / cssW);
+    first = false;
+    start = end;
+  }
+  return pdf;
+}
+async function downloadPdf(innerHtml, filename){
+  const pdf = await renderHtmlToPdf(innerHtml);
+  pdf.save(filename);
+}
+async function sharePdf(innerHtml, filename){
+  const pdf = await renderHtmlToPdf(innerHtml);
+  const blob = pdf.output('blob');
+  const file = new File([blob], filename, {type:'application/pdf'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:filename}); return; }catch(e){ /* fall through */ }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  window.open('https://wa.me/','_blank');
+}
+
+/* ---------------------------------------------------------- PRICES ---------------------------------------------------------- */
+const DEFAULT_PRICES = {
+  jalabPerKuz: 2,
+  niswan: { 'هارت': { withPeel: 140, withoutPeel: 190 }, 'كاسات': { withPeel: 150, withoutPeel: 200 }, 'حشو': { withPeel: 130, withoutPeel: 180 } },
+  takhrit: { 'قطع': 100, 'قرص': 100, 'شرايح': 90, 'حدوة': 110 },
+  workerDailyWage: 150,
+  sales: { 'قطع (أولى)': 35, 'قطع (ثانية)': 25, 'كاسات (أولى)': 50, 'كاسات (ثانية)': 40, 'قرص (أولى)': 40, 'قرص (ثانية)': 30, 'حشو (أولى)': 40, 'حشو (ثانية)': 30, 'شرايح (أولى)': 35, 'شرايح (ثانية)': 25, 'حدوة (أولى)': 35, 'حدوة (ثانية)': 25, 'أخضر': 2 }
+};
+// تكملة أي تسعيرة قديمة ناقصة بالقيم الافتراضية عشان صفحة التسعير ماتقعش
+function withPriceDefaults(p){
+  p = p || {};
+  return {...DEFAULT_PRICES, ...p,
+    niswan: {...DEFAULT_PRICES.niswan, ...(p.niswan||{})},
+    takhrit: {...DEFAULT_PRICES.takhrit, ...(p.takhrit||{})},
+    sales: {...DEFAULT_PRICES.sales, ...(p.sales||{})}};
+}
+function getPriceSetForDate(db, dateStr){
+  const dayMatch = (db.priceDays||[]).find(p=>p.day===dateStr);
+  if(dayMatch) return dayMatch;
+  const ws = getWeekStart(dateStr);
+  const weekMatch = (db.priceWeeks||[]).find(p=>p.weekStart===ws);
+  if(weekMatch) return weekMatch;
+  // أسبوع ملهوش تسعير → ياخد سعر آخر أسبوع متسعّر قبله، وبعدين الموسمي، وبعدين الافتراضي
+  // (الأسعار بتتحسب وقت العرض، فأي تعديل في تسعيرة أسبوع بيعدّل الكشوف القديمة والربح وكل الأقسام)
+  const candidates = (db.priceWeeks||[]).filter(p=>p.weekStart<ws).sort((a,b)=> b.weekStart.localeCompare(a.weekStart));
+  if(candidates[0]) return candidates[0];
+  if(db.seasonPrices) return db.seasonPrices;
+  return {...DEFAULT_PRICES, weekStart:ws};
+}
+
+/* ---------------------------------------------------------- DB ---------------------------------------------------------- */
+function emptyDB(){
+  return {
+    capital: 0,
+    settings: { ownerPhone: '' },
+    jalaba: [], sakinas: [], takhritFixed: [], banadeer: [], workers: [], factories: [],
+    expenses: [], partnersList: [], partners: [], debts: [], equipment: [],
+    priceWeeks: [], priceDays: [], seasonPrices: null
+  };
+}
+
+/* ---------------------------------------------------------- LOGIN ---------------------------------------------------------- */
+function Login({ onLogin }){
+  const [mode,setMode] = useState('login'); // 'login' | 'register'
+  const [name,setName]=useState('');
+  const [u,setU]=useState(''); const [p,setP]=useState(''); const [err,setErr]=useState(''); const [busy,setBusy]=useState(false);
+
+  async function submit(e){
+    e.preventDefault();
+    setErr('');
+    if(!u.trim() || !p.trim() || (mode==='register' && !name.trim())){
+      setErr('من فضلك املأ كل الخانات'); return;
+    }
+    setBusy(true);
+    try{
+      if(mode==='register'){
+        await apiFetch('/api/register', {method:'POST', body:JSON.stringify({name:name.trim(), username:u.trim(), password:p})});
+      }
+      const data = await apiFetch('/api/login', {method:'POST', body:JSON.stringify({username:u.trim(), password:p})});
+      setToken(data.token);
+      onLogin(data.nawala);
+    }catch(ex){
+      setErr(ex.message);
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-cream relative overflow-hidden">
+      <div className="absolute -top-24 -right-24 opacity-10 rotate-12"><ArtichokeMark className="w-96 h-96" /></div>
+      <div className="absolute -bottom-28 -left-16 opacity-10 -rotate-12"><ArtichokeMark className="w-72 h-72" /></div>
+      <form onSubmit={submit} className="relative bg-white shadow-card rounded-2xl border border-leaf-line/40 w-[92%] max-w-sm p-8 rise">
+        <div className="flex flex-col items-center mb-6">
+          <ArtichokeMark className="w-16 h-16 mb-2"/>
+          <h1 className="font-display text-4xl text-leaf-deep tracking-wide">نوالتي</h1>
+          <p className="text-sm text-ink/60 mt-1">دفتر حساباتك في مكان واحد</p>
+        </div>
+        {mode==='register' && (
+          <>
+            <label className="block text-sm mb-1 text-ink/70">اسم صاحب النوالة</label>
+            <input value={name} onChange={e=>setName(e.target.value)} className="w-full mb-4 rounded-lg border border-leaf-line px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-leaf-bright/60" placeholder="مثال: الحاج محمود"/>
+          </>
+        )}
+        <label className="block text-sm mb-1 text-ink/70">اسم المستخدم</label>
+        <input value={u} onChange={e=>setU(e.target.value)} className="w-full mb-4 rounded-lg border border-leaf-line px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-leaf-bright/60" placeholder="اسم الدخول"/>
+        <label className="block text-sm mb-1 text-ink/70">كلمة المرور</label>
+        <input value={p} onChange={e=>setP(e.target.value)} type="password" className="w-full mb-2 rounded-lg border border-leaf-line px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-leaf-bright/60" placeholder="••••••••"/>
+        {err && <div className="text-rust text-sm mb-2">{err}</div>}
+        <button disabled={busy} className="mt-4 w-full bg-leaf-deep hover:bg-leaf-mid transition text-cream rounded-lg py-2.5 font-bold flex items-center justify-center gap-2 disabled:opacity-60">
+          {busy ? 'لحظة...' : (mode==='login' ? 'دخول' : 'إنشاء الحساب')} <Icon name="arrow" className="w-4 h-4"/>
+        </button>
+        <button type="button" onClick={()=>{setMode(mode==='login'?'register':'login'); setErr('');}} className="w-full text-center text-xs text-leaf-mid mt-4 hover:underline">
+          {mode==='login' ? 'لسه معاكش حساب؟ اعمل واحد جديد' : 'عندك حساب بالفعل؟ سجّل دخول'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- SIDEBAR / TOPBAR ---------------------------------------------------------- */
+const NAV = [
+  {key:'dashboard', label:'الرئيسية', icon:'grid'},
+  {key:'sales', label:'المبيعات', icon:'receipt'},
+  {key:'jalaba', label:'الجلابة', icon:'truck'},
+  {key:'raseef', label:'المشتريات', icon:'truck'},
+  {key:'sakina', label:'النوالات', icon:'leaf'},
+  {key:'takhrit', label:'التخريط', icon:'blade'},
+  {key:'workers', label:'أنفار النوالة', icon:'user'},
+  {key:'expenses', label:'المصاريف', icon:'wallet'},
+  {key:'equipment', label:'العدة', icon:'box'},
+  {key:'pricing', label:'التسعير', icon:'tag'},
+  {key:'debts', label:'المديونات', icon:'debt'},
+];
+
+function Sidebar({page,setPage,user,onLogout,mobileOpen,setMobileOpen}){
+  return (
+    <>
+    {mobileOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden transition-all" onClick={()=>setMobileOpen(false)}/>}
+    <aside className={`fixed md:static z-40 top-0 right-0 h-full md:h-auto md:min-h-screen w-[260px] bg-leaf-deep text-cream flex flex-col shrink-0 transition-transform duration-300 shadow-2xl md:shadow-none ${mobileOpen?'translate-x-0':'translate-x-full md:translate-x-0'}`}>
+      <div className="flex items-center gap-3 px-6 py-10 border-b border-cream/5">
+        <ArtichokeMark className="w-12 h-12"/>
+        <div>
+          <div className="font-display text-3xl leading-none">نوالتي</div>
+          <div className="text-xs text-cream/60 mt-1.5">{user}</div>
+        </div>
+      </div>
+      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
+        {NAV.map(item=>(
+          <button key={item.key} onClick={()=>{setPage(item.key); setMobileOpen(false);}}
+            className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-[1.25rem] text-[16px] transition-all relative overflow-hidden
+              ${page===item.key ? 'bg-white text-leaf-deep font-black shadow-[0_4px_15px_rgba(0,0,0,0.15)] scale-100' : 'text-cream/80 hover:bg-white/10 hover:text-white'}`}>
+            <Icon name={item.icon} className={`w-5 h-5 shrink-0 transition-transform ${page===item.key ? 'text-leaf-deep' : 'opacity-80'}`}/>
+            <span className="relative z-10">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="mt-auto border-t border-cream/10 p-4">
+        <button onClick={()=>{
+          if(confirm('تنبيه خطير جداً: هل أنت متأكد من رغبتك في مسح كافة البيانات من هذا المشروع والبدء من جديد؟ (لا يمكن التراجع عن هذه الخطوة)')){
+            const keys = [];
+            for(let i=0; i<localStorage.length; i++){
+              if(localStorage.key(i).startsWith('nawalty_db_')) keys.push(localStorage.key(i));
+            }
+            keys.forEach(k=>localStorage.removeItem(k));
+            alert('تم مسح جميع البيانات بنجاح.');
+            window.location.reload();
+          }
+        }} className="flex w-full items-center gap-3 px-5 py-4 text-rust hover:text-white hover:bg-rust/20 transition text-sm font-bold">
+          <Icon name="trash" className="w-5 h-5"/> تصفير بيانات المشروع بالكامل
+        </button>
+        <button onClick={onLogout} className="flex w-full items-center gap-3 px-5 py-4 border-t border-cream/10 text-cream/70 hover:text-cream hover:bg-white/5">
+          <Icon name="logout" className="w-5 h-5"/> تسجيل الخروج
+        </button>
+      </div>
+    </aside>
+    </>
+  );
+}
+
+function Topbar({title, setMobileOpen}){
+  return (
+    <div className="flex items-center justify-between md:justify-end gap-3 px-5 py-4 border-b border-leaf-line/40 bg-cream/80 backdrop-blur sticky top-0 z-20">
+      <button className="md:hidden text-leaf-deep" onClick={()=>setMobileOpen(true)}>
+        <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <h2 className="font-display text-2xl text-leaf-deep md:hidden">{title}</h2>
+      <div className="flex items-center gap-3">
+        {LOCAL_MODE && <span title="السيرفر مش متاح — البيانات بتتحفظ على المتصفح ده بس" className="text-xs font-bold px-3 py-1 rounded-full bg-gold/20 text-gold-dark border border-gold/40">وضع محلي (على الجهاز ده بس)</span>}
+        <div className="hidden md:block text-sm text-ink/50">{new Date().toLocaleDateString('ar-EG',{weekday:'long', year:'numeric', month:'long', day:'numeric'})}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- SHARED UI ---------------------------------------------------------- */
+function VerseHeader({text}){
+  if(!text) return null;
+  return (
+    <div className="mb-6 rounded-full bg-white/60 backdrop-blur-xl shadow-card px-8 py-5 text-center flex items-center justify-center border border-white/80">
+      <p className="font-display text-2xl md:text-3xl text-leaf-deep leading-relaxed drop-shadow-sm">{text}</p>
+    </div>
+  );
+}
+
+function StatCard({label, value, icon, tone="leaf", sub}){
+  const tones = {
+    leaf: "bg-leaf-deep/90 backdrop-blur-2xl border border-white/10 text-white shadow-card hover:shadow-card-hover",
+    gold: "bg-gold/90 backdrop-blur-2xl border border-white/20 text-white shadow-card hover:shadow-card-hover",
+    rust: "bg-rust/90 backdrop-blur-2xl border border-white/20 text-white shadow-card hover:shadow-card-hover",
+    white: "bg-white/60 backdrop-blur-2xl text-ink border border-white/80 shadow-card hover:shadow-card-hover"
+  };
+  return (
+    <div className={`rounded-[2.5rem] p-8 flex items-center justify-between rise transition-all duration-500 hover:-translate-y-1 ${tones[tone]}`}>
+      <div>
+        <div className="text-sm opacity-90 mb-2 font-bold font-display tracking-wide drop-shadow-sm">{label}</div>
+        <div className="text-3xl md:text-4xl font-bold num drop-shadow-md">{value}</div>
+        {sub && <div className="text-xs opacity-70 mt-2">{sub}</div>}
+      </div>
+      <div className={`opacity-80 p-3 rounded-full ${tone==='white'?'bg-cream/80 backdrop-blur-sm':'bg-white/10 backdrop-blur-sm'}`}>
+        <Icon name={icon} className="w-8 h-8 md:w-10 md:h-10"/>
+      </div>
+    </div>
+  );
+}
+
+function CapitalCard({capital, onSave}){
+  const [editing,setEditing]=useState(false);
+  const [val,setVal]=useState(capital);
+  return (
+    <div className="bg-white/60 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-card border border-white/80 flex items-center justify-between rise transition-all duration-500 hover:shadow-card-hover hover:-translate-y-1">
+      <div className="flex-1">
+        <div className="text-sm opacity-90 mb-2 font-bold font-display tracking-wide text-ink/70">رأس المال في بداية الموسم</div>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <input type="number" value={val} onChange={e=>setVal(e.target.value)} className="border border-white/60 bg-white/50 backdrop-blur-sm rounded-xl px-4 py-2 w-32 num text-sm shadow-inner"/>
+            <button onClick={()=>{onSave(parseFloat(val)||0); setEditing(false);}} className="text-leaf-mid bg-white/50 p-2 rounded-xl shadow-sm"><Icon name="check" className="w-5 h-5"/></button>
+          </div>
+        ) : (
+          <div className="text-3xl md:text-4xl font-bold num text-ink drop-shadow-sm">{num(capital)}</div>
+        )}
+      </div>
+      {!editing && <button onClick={()=>{setVal(capital); setEditing(true);}} className="text-ink/40 hover:text-leaf-deep p-3 bg-white/40 rounded-full hover:bg-white/80 transition-all shadow-sm"><Icon name="edit" className="w-5 h-5"/></button>}
+    </div>
+  );
+}
+
+function FieldInput({field, value, onChange}){
+  if(field.type==='checkbox'){
+    return <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!value} onChange={e=>onChange(e.target.checked)}/>{field.label}</label>;
+  }
+  if(field.type==='select'){
+    return (
+      <select value={value||''} onChange={e=>onChange(e.target.value)} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm">
+        <option value="" disabled>اختر</option>
+        {field.options.map(o=> (typeof o==='object')
+          ? <option key={o.value} value={o.value}>{o.label}</option>
+          : <option key={o} value={o}>{o}</option>
+        )}
+      </select>
+    );
+  }
+  return (
+    <input type={field.type} value={value===undefined?'':value}
+      onChange={e=>onChange(field.type==='number'? (e.target.value===''?'':parseFloat(e.target.value)) : e.target.value)}
+      className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm num" placeholder={field.label}/>
+  );
+}
+
+// getRowColumns (اختياري): الأعمدة الخاصة بكل صف — مثلاً كارتة «أخضر» مالهاش درجة ولا خصم
+function EditableTable({columns, rows, onUpdate, onDelete, emptyLabel, person = null, getRowColumns = null}){
+  const [editingId,setEditingId]=useState(null);
+  const [draft,setDraft]=useState({});
+  function startEdit(row){ setEditingId(row.id); setDraft({...row}); }
+  function cancel(){ setEditingId(null); setDraft({}); }
+  function save(){ onUpdate(editingId, draft); setEditingId(null); }
+  return (
+    <table className="w-full text-sm min-w-[600px]">
+      <thead>
+        <tr className="text-ink/50 text-xs border-b border-leaf-line/30">
+          {columns.map(c=><th key={c.key} className="text-right py-3 px-3">{c.label}</th>)}
+          <th className="py-3 px-3"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length===0 && <tr><td colSpan={columns.length+1} className="text-center text-ink/40 py-6">{emptyLabel||'لا توجد بيانات'}</td></tr>}
+        {rows.map(row=>{
+          const isEd = editingId===row.id;
+          return (
+            <tr key={row.id} className="border-b border-leaf-line/10 hover:bg-cream/40">
+              {columns.map(col=>{
+                const own = (getRowColumns && !col.computed && col.key!=='date')
+                  ? getRowColumns(isEd ? draft : row).find(x=>x.key===col.key) : col;
+                return (
+                <td key={col.key} className="py-2 px-3">
+                  {!own ? '—' : (isEd && !col.computed
+                    ? <FieldInput field={own} value={draft[col.key]} onChange={v=>{ const next = {...draft,[col.key]:v}; setDraft(getRowColumns ? fixSelectValues(next, getRowColumns(next)) : next); }}/>
+                    : (col.render ? col.render(row, person || null) : (col.type==='checkbox' ? (row[col.key]?'✔':'—') : (col.type==='date' ? formatDateWithDay(row[col.key]) : (col.type==='number' ? (row[col.key]===''||row[col.key]===undefined||row[col.key]===null?'—':num(row[col.key])) : (row[col.key]===undefined||row[col.key]===''?'—':row[col.key]))))))
+                  }
+                </td>
+                );
+              })}
+              <td className="py-2 px-3 whitespace-nowrap">
+                {isEd ? (
+                  <div className="flex items-center gap-2">
+                    <button onClick={save} className="text-leaf-mid"><Icon name="check" className="w-4 h-4"/></button>
+                    <button onClick={cancel} className="text-ink/40 text-xs">إلغاء</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>startEdit(row)} className="text-ink/40 hover:text-leaf-deep"><Icon name="edit" className="w-4 h-4"/></button>
+                    <button onClick={()=>onDelete(row.id)} className="text-rust/60 hover:text-rust"><Icon name="trash" className="w-4 h-4"/></button>
+                  </div>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/* ---------------------------------------------------------- SEASON SUMMARY PANEL ---------------------------------------------------------- */
+function SeasonSummaryPanel({people, personLabel, calcEntryTotal, db, sectionTitle}){
+  const [filterMode, setFilterMode] = useState('season'); // 'season' | 'week'
+  const [pickedDate, setPickedDate] = useState(todayStr());
+  const ws = getWeekStart(pickedDate);
+
+  const rows = people.map(p=>{
+    const entries = filterMode==='week' ? p.entries.filter(e=>getWeekStart(e.date)===ws) : p.entries;
+    const payments = filterMode==='week' ? p.payments.filter(x=>getWeekStart(x.date)===ws) : p.payments;
+    const earned = entries.reduce((s,e)=>s+calcEntryTotal(e, getPriceSetForDate(db,e.date), p),0);
+    const paid = payments.reduce((s,x)=>s+(x.amount||0),0);
+    return {name:p.name, earned, paid, remaining:earned-paid, count:entries.length+payments.length};
+  }).filter(r=>r.count>0);
+
+  const totalEarned = rows.reduce((s,r)=>s+r.earned,0);
+  const totalPaid = rows.reduce((s,r)=>s+r.paid,0);
+  const totalRemaining = totalEarned - totalPaid;
+
+  const titleText = filterMode==='season' ? 'ملخص الموسم حتى الآن' : 'ملخص أسبوع ' + getWeekRangeLabel(ws);
+
+  function buildHtml(){
+    const head = `<div style="margin-bottom:12px;"><div style="font-size:22px; font-weight:900; color:#25422C;">${titleText}</div><div style="font-size:12px; color:#666;">${sectionTitle||''}</div></div>`;
+    const table = pdfTable([personLabel,'الإجمالي المستحق','المدفوع فعلياً','الباقي المتبقي'], rows.map(r=>[r.name, num(r.earned), num(r.paid), num(r.remaining)]));
+    const totalsHtml = `<div style="display:flex; gap:12px; margin-top:14px;">
+      <div style="flex:1; background:#DDE7CE; border-radius:10px; padding:12px; text-align:center;"><div style="font-size:11px; color:#25422C; font-weight:bold;">إجمالي المستحق</div><div style="font-weight:900; font-size:16px; color:#25422C;">${num(totalEarned)}</div></div>
+      <div style="flex:1; background:#EAD3A0; border-radius:10px; padding:12px; text-align:center;"><div style="font-size:11px; color:#8C641F; font-weight:bold;">إجمالي المدفوع</div><div style="font-weight:900; font-size:16px; color:#8C641F;">${num(totalPaid)}</div></div>
+      <div style="flex:1; background:${totalRemaining>0?'#A34C3D':'#25422C'}; color:#fff; border-radius:10px; padding:12px; text-align:center;"><div style="font-size:11px; opacity:.9; font-weight:bold;">صافي الباقي</div><div style="font-weight:900; font-size:16px;">${num(totalRemaining)}</div></div>
+    </div>`;
+    return head+table+totalsHtml;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-card border border-leaf-line/40 p-5 mb-6 rise">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-8 bg-leaf-deep rounded-full"/>
+          <div>
+            <h3 className="font-bold text-base text-leaf-deep">{titleText}</h3>
+            <p className="text-xs text-ink/50">إجمالي العمليات والدفعات المسجلة</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex bg-creamdark/60 p-1 rounded-xl">
+            <button onClick={()=>setFilterMode('season')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${filterMode==='season'?'bg-leaf-deep text-cream shadow-sm':'text-ink/60 hover:text-ink'}`}>الموسم كاملاً</button>
+            <button onClick={()=>setFilterMode('week')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${filterMode==='week'?'bg-leaf-deep text-cream shadow-sm':'text-ink/60 hover:text-ink'}`}>أسبوع محدد</button>
+          </div>
+          
+          {filterMode==='week' && (
+            <input type="date" value={pickedDate} onChange={e=>setPickedDate(e.target.value)} className="rounded-xl border border-leaf-line px-2 py-1 text-xs num"/>
+          )}
+          
+          <button onClick={()=>downloadPdf(buildHtml(), titleText+'.pdf')} className="text-xs px-3 py-1.5 rounded-xl border border-leaf-line flex items-center gap-1 text-leaf-deep bg-leaf-pale/40 hover:bg-leaf-pale font-bold"><Icon name="download" className="w-4 h-4"/>PDF</button>
+          <button onClick={()=>sharePdf(buildHtml(), titleText+'.pdf')} className="text-xs px-3 py-1.5 rounded-xl border border-leaf-line flex items-center gap-1 text-leaf-mid bg-leaf-pale/40 hover:bg-leaf-pale font-bold"><Icon name="whatsapp" className="w-4 h-4"/>واتساب</button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div className="bg-leaf-pale/50 border border-leaf-line/40 rounded-xl p-3 text-center">
+          <div className="text-xs text-leaf-deep font-bold mb-1">إجمالي المستحق</div>
+          <div className="text-lg font-black text-leaf-deep num">{money(totalEarned)}</div>
+        </div>
+        <div className="bg-gold/15 border border-gold/30 rounded-xl p-3 text-center">
+          <div className="text-xs text-gold-dark font-bold mb-1">إجمالي المدفوع</div>
+          <div className="text-lg font-black text-gold-dark num">{money(totalPaid)}</div>
+        </div>
+        <div className={`rounded-xl p-3 text-center font-bold text-white ${totalRemaining>0?'bg-rust':'bg-leaf-deep'}`}>
+          <div className="text-xs opacity-90 mb-1">صافي الباقي</div>
+          <div className="text-lg font-black num">{money(totalRemaining)}</div>
+        </div>
+      </div>
+
+      {rows.length===0 ? <p className="text-sm text-ink/40 text-center py-4">لا توجد عمليات مسجلة في هذا النطاق</p> : (
+        <div className="overflow-x-auto rounded-xl border border-leaf-line/20">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-cream/80 text-leaf-deep text-xs font-bold border-b border-leaf-line/30">
+                <th className="text-right py-2.5 px-3">{personLabel}</th>
+                <th className="text-right py-2.5 px-3">المستحق</th>
+                <th className="text-right py-2.5 px-3">المدفوع</th>
+                <th className="text-right py-2.5 px-3">الباقي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r,i)=>(
+                <tr key={i} className="border-b border-leaf-line/10 hover:bg-cream/30 transition">
+                  <td className="py-2.5 px-3 font-bold text-ink">{r.name}</td>
+                  <td className="py-2.5 px-3 num text-leaf-deep font-semibold">{num(r.earned)}</td>
+                  <td className="py-2.5 px-3 num text-gold-dark font-semibold">{num(r.paid)}</td>
+                  <td className="py-2.5 px-3 num">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${r.remaining>0?'bg-rust/15 text-rust':'bg-leaf-pale text-leaf-mid'}`}>
+                      {num(r.remaining)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+function getPersonWeeklyConfig(person, dateStr){
+  const list = normalizeWeeklyPrices(person && (person.weeklyPrices || person.weekly_prices));
+  if(list.length === 0) return null;
+  const ws = getWeekStart(dateStr || todayStr());
+  const sorted = list.sort((a,b) => (b.weekStart||'').localeCompare(a.weekStart||''));
+  // نفس الأسبوع، وإلا آخر أسبوع متسعّر قبله — ومش بنطبّق سعر أسبوع جاي على عمليات قديمة
+  return sorted.find(w => w.weekStart === ws) || sorted.find(w => w.weekStart <= ws) || null;
+}
+
+/* ---------------------------------------------------------- PERSON WEEKLY PRICING ---------------------------------------------------------- */
+function PersonWeeklyPricing({ person, personType, onSavePrices }){
+  const [weekStart, setWeekStart] = useState(getWeekStart(todayStr()));
+  const items = personType === 'jalab' 
+    ? ['فرنساوي', 'بلدي', 'غير ذلك', 'عام']
+    : ['قطع (أولى)', 'قطع (ثانية)', 'كاسات (أولى)', 'كاسات (ثانية)', 'قرص (أولى)', 'قرص (ثانية)', 'حشو (أولى)', 'حشو (ثانية)', 'شرايح (أولى)', 'شرايح (ثانية)', 'حدوة (أولى)', 'حدوة (ثانية)', 'فرنساوي', 'بلدي', 'فرزة'];
+
+  const existingWeek = (person.weeklyPrices || []).find(w => w.weekStart === weekStart);
+  const activeConfig = getPersonWeeklyConfig(person, weekStart);
+  const initialPrices = existingWeek ? {...existingWeek.prices} : (activeConfig ? {...activeConfig.prices} : {});
+  const initialDiscount = existingWeek ? (existingWeek.discount || 0) : (activeConfig ? (activeConfig.discount || 0) : 0);
+
+  const [draftPrices, setDraftPrices] = useState(initialPrices);
+  const [discount, setDiscount] = useState(initialDiscount);
+
+  useEffect(()=>{
+    const ex = (person.weeklyPrices || []).find(w => w.weekStart === weekStart);
+    const act = getPersonWeeklyConfig(person, weekStart);
+    setDraftPrices(ex ? {...ex.prices} : (act ? {...act.prices} : {}));
+    setDiscount(ex ? (ex.discount || 0) : (act ? (act.discount || 0) : 0));
+  }, [weekStart, person]);
+
+  async function save(){
+    const copyPrices = (person.weeklyPrices || []).filter(w => w.weekStart !== weekStart);
+    const updated = [...copyPrices, { weekStart, prices: draftPrices, discount: parseFloat(discount)||0 }];
+    try{
+      await onSavePrices(updated);
+      alert('تم حفظ تسعير أسبوع ' + getWeekRangeLabel(weekStart) + ' الخاص بـ ' + person.name);
+    }catch(e){ alert('ماتحفظش التسعير: ' + e.message); }
+  }
+
+  async function deleteWeek(ws){
+    if(!confirm('هل أنت متأكد من مسح تسعير هذا الأسبوع؟')) return;
+    const updated = (person.weeklyPrices || []).filter(w => w.weekStart !== ws);
+    try{ await onSavePrices(updated); }catch(e){ alert('ماتمسحش التسعير: ' + e.message); }
+  }
+
+  const savedWeeks = (person.weeklyPrices || []).slice().sort((a,b) => (b.weekStart||'').localeCompare(a.weekStart||''));
+
+  return (
+    <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-5 mt-6 rise">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <div>
+          <h3 className="font-bold text-leaf-deep text-base">جدول التسعير الأسبوعي الخاص بـ ({person.name})</h3>
+          <p className="text-xs text-ink/50">حدد الأسعار ونسبة الخصم الخاصة بهذا الشخص لكل أسبوع</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-ink/60 font-bold">إضافة/تعديل أسبوع:</label>
+          <input type="date" onChange={e=>setWeekStart(getWeekStart(e.target.value))} className="rounded-xl border border-leaf-line px-2 py-1 text-xs num"/>
+          <span className="text-xs text-leaf-deep font-bold bg-leaf-pale/60 px-2 py-1 rounded-lg">{getWeekRangeLabel(weekStart)}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4 p-4 border border-leaf-line/20 rounded-xl bg-leaf-pale/10">
+        {items.map(it => (
+          <div key={it}>
+            <label className="block text-xs text-ink/60 font-bold mb-1">{it} ({personType==='jalab'||it==='فرنساوي'||it==='بلدي'||it==='فرزة'?'كوز':'كيلو'})</label>
+            <input type="number" value={draftPrices[it] !== undefined ? draftPrices[it] : ''}
+              onChange={e => setDraftPrices({...draftPrices, [it]: e.target.value === '' ? '' : parseFloat(e.target.value)})}
+              placeholder="السعر" className="w-full rounded-lg border border-leaf-line px-2.5 py-1.5 text-sm num"/>
+          </div>
+        ))}
+        {personType !== 'jalab' && (
+          <div>
+            <label className="block text-xs font-bold text-rust mb-1">نسبة الخصم %</label>
+            <input type="number" value={discount} onChange={e=>setDiscount(e.target.value)}
+              placeholder="%" className="w-full rounded-lg border border-rust/40 px-2.5 py-1.5 text-sm num text-rust font-bold"/>
+          </div>
+        )}
+        <div className="col-span-full mt-2">
+          <button onClick={save} className="bg-leaf-deep hover:bg-leaf-mid text-cream text-xs rounded-xl px-5 py-2.5 font-bold flex items-center gap-2">
+            <Icon name="check" className="w-4 h-4"/>حفظ أسعار هذا الأسبوع
+          </button>
+        </div>
+      </div>
+
+      {savedWeeks.length > 0 && (
+        <div className="mt-6">
+          <h4 className="font-bold text-sm text-leaf-deep mb-3 border-b border-leaf-line/20 pb-2">الأسابيع المحفوظة سابقاً:</h4>
+          <div className="overflow-x-auto rounded-xl border border-leaf-line/20">
+            <table className="w-full text-xs text-right">
+              <thead className="bg-cream/80 text-leaf-deep border-b border-leaf-line/30">
+                <tr>
+                  <th className="p-2">تاريخ الأسبوع</th>
+                  {items.map(it=><th key={it} className="p-2">{it}</th>)}
+                  {personType !== 'jalab' && <th className="p-2 text-rust">الخصم %</th>}
+                  <th className="p-2">إجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {savedWeeks.map(w => (
+                  <tr key={w.weekStart} className="border-b border-leaf-line/10 hover:bg-cream/30">
+                    <td className="p-2 font-bold num text-leaf-deep">{getWeekRangeLabel(w.weekStart)}</td>
+                    {items.map(it=><td key={it} className="p-2 num">{w.prices[it] !== undefined && w.prices[it] !== '' ? w.prices[it] : '—'}</td>)}
+                    {personType !== 'jalab' && <td className="p-2 num font-bold text-rust">{w.discount ? w.discount+'%' : '0%'}</td>}
+                    <td className="p-2">
+                      <div className="flex items-center gap-2">
+                        <button onClick={()=>{setWeekStart(w.weekStart);}} className="text-leaf-mid hover:text-leaf-deep" title="تعديل"><Icon name="edit" className="w-4 h-4"/></button>
+                        <button onClick={()=>deleteWeek(w.weekStart)} className="text-rust/60 hover:text-rust" title="حذف"><Icon name="trash" className="w-4 h-4"/></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// لما نوع الكارتة يتغير (مصنع ↔ أخضر) أي اختيار مش موجود في القائمة الجديدة يرجع لأول اختيار
+function fixSelectValues(form, cols){
+  const next = {...form};
+  cols.forEach(c=>{
+    if(c.type !== 'select' || !c.options || !c.options.length) return;
+    const vals = c.options.map(o=> typeof o==='object' ? o.value : o);
+    if(!vals.includes(next[c.key])) next[c.key] = vals[0];
+  });
+  return next;
+}
+
+// دمج أعمدة نوعين من الكروت (مصنع + أخضر) في جدول واحد
+function mergeColumns(a, b){
+  const out = a.map(c=>({...c}));
+  b.forEach((c, i)=>{
+    const ex = out.find(x=>x.key===c.key);
+    if(ex){ if(ex.label !== c.label) ex.label = ex.label + ' / ' + c.label; return; }
+    const prevKey = i>0 ? b[i-1].key : null;
+    const at = prevKey ? out.findIndex(x=>x.key===prevKey) + 1 : 0;
+    out.splice(at, 0, {...c});
+  });
+  return out;
+}
+
+/* ---------------------------------------------------------- PERSON ACCOUNT (generic) ---------------------------------------------------------- */
+function PersonAccount({title, icon, personLabel, entryLabel, paymentsLabel, entryColumns, extraColumns, calcEntryTotal, db, people, setPeople, weeklyGrouping, weeklyQtyField, hideHeader, remote, verse, showWeeklyPricing, personType}){
+  const [selected,setSelected]=useState(people[0]?.id || null);
+  const [newName,setNewName]=useState('');
+  const [entryForm,setEntryForm]=useState({});
+  const [paymentForm,setPaymentForm]=useState({date:todayStr(), amount:'', note:''});
+  const [statementFromDate,setStatementFromDate]=useState('');
+  const [statementToDate,setStatementToDate]=useState('');
+  const [busy,setBusy]=useState(false);
+
+  // أعمدة فورم الإضافة بتتغير حسب اختيارك، لكن الجدول والكشف بيعرضوا أعمدة كل صف حسب بياناته هو
+  const activeColumns = typeof entryColumns === 'function' ? entryColumns(entryForm) : entryColumns;
+  const rowColumnsFor = row => typeof entryColumns === 'function' ? entryColumns(row||{}) : entryColumns;
+  const tableColumns = typeof entryColumns === 'function'
+    ? mergeColumns(entryColumns({kind:'مصنع'}), entryColumns({kind:'أخضر'}))
+    : entryColumns;
+
+  function defaultEntryForm(){
+    const f = { date: todayStr() };
+    const initialCols = typeof entryColumns === 'function' ? entryColumns(f) : entryColumns;
+    initialCols.forEach(c=>{
+      f[c.key] = c.type==='checkbox' ? false : (c.options ? c.options[0] : '');
+    });
+    return f;
+  }
+
+  useEffect(()=>{
+    if(Object.keys(entryForm).length === 0){
+      setEntryForm(defaultEntryForm());
+    }
+  }, []);
+
+  const person = people.find(p=>p.id===selected) || null;
+
+  async function addPerson(){
+    if(!newName.trim()) return;
+    if(remote){
+      setBusy(true);
+      try{
+        const p = await remote.addPerson(newName.trim());
+        setPeople([...people, p]); setNewName(''); setSelected(p.id);
+      }catch(e){ alert(e.message); }
+      setBusy(false);
+    } else {
+      const p = { id: uid(), name: newName.trim(), entries: [], payments: [] };
+      setPeople([...people, p]); setNewName(''); setSelected(p.id);
+    }
+  }
+  async function removePerson(id){
+    if(!confirm('تأكيد حذف السجل بالكامل؟')) return;
+    if(remote){
+      try{ await remote.deletePerson(id); }catch(e){ alert(e.message); return; }
+    }
+    setPeople(people.filter(p=>p.id!==id));
+    if(selected===id) setSelected(null);
+  }
+  function updateEntries(newEntries){ setPeople(people.map(p=> p.id===person.id ? {...p, entries:newEntries} : p)); }
+  function updatePayments(newPayments){ setPeople(people.map(p=> p.id===person.id ? {...p, payments:newPayments} : p)); }
+
+  async function addEntry(){
+    if(!person) return;
+    if(personType === 'worker' && (person.entries||[]).some(e=>e.date===entryForm.date)){
+      alert('اليوم ده متسجل بالفعل للنفر ده — عدّل القيد الموجود بدل ما تضيف واحد جديد');
+      return;
+    }
+    if(remote){
+      setBusy(true);
+      try{
+        const e = await remote.addEntry(person.id, entryForm);
+        updateEntries([e, ...person.entries]);
+        setEntryForm(defaultEntryForm());
+      }catch(err){ alert(err.message); }
+      setBusy(false);
+    } else {
+      updateEntries([{id:uid(), ...entryForm}, ...person.entries]);
+      setEntryForm(defaultEntryForm());
+    }
+  }
+  async function editEntry(id, draft){
+    if(remote){
+      try{
+        const updated = await remote.updateEntry(id, draft);
+        updateEntries(person.entries.map(e=>e.id===id?updated:e));
+      }catch(err){ alert(err.message); }
+    } else {
+      updateEntries(person.entries.map(e=>e.id===id?{...e,...draft}:e));
+    }
+  }
+  async function removeEntry(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    if(remote){
+      try{ await remote.deleteEntry(id); }catch(err){ alert(err.message); return; }
+    }
+    updateEntries(person.entries.filter(e=>e.id!==id));
+  }
+
+  async function addPayment(){
+    if(!paymentForm.amount) return;
+    if(remote){
+      setBusy(true);
+      try{
+        const x = await remote.addPayment(person.id, paymentForm);
+        updatePayments([x, ...person.payments]);
+        setPaymentForm({date:todayStr(), amount:'', note:''});
+      }catch(err){ alert(err.message); }
+      setBusy(false);
+    } else {
+      updatePayments([{id:uid(), ...paymentForm, amount:parseFloat(paymentForm.amount)}, ...person.payments]);
+      setPaymentForm({date:todayStr(), amount:'', note:''});
+    }
+  }
+  async function editPayment(id, draft){
+    if(remote){
+      try{
+        const updated = await remote.updatePayment(id, draft);
+        updatePayments(person.payments.map(x=>x.id===id?updated:x));
+      }catch(err){ alert(err.message); }
+    } else {
+      updatePayments(person.payments.map(x=>x.id===id?{...x,...draft}:x));
+    }
+  }
+  async function removePayment(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    if(remote){
+      try{ await remote.deletePayment(id); }catch(err){ alert(err.message); return; }
+    }
+    updatePayments(person.payments.filter(x=>x.id!==id));
+  }
+
+  function totals(p){
+    const earned = p.entries.reduce((s,e)=> s+calcEntryTotal(e, getPriceSetForDate(db,e.date), p), 0);
+    const paid = p.payments.reduce((s,x)=>s+(x.amount||0), 0);
+    return {earned, paid, remaining: earned-paid};
+  }
+
+  function statementHtml(p){
+    const filteredEntries = p.entries.filter(e => {
+      if(statementFromDate && e.date < statementFromDate) return false;
+      if(statementToDate && e.date > statementToDate) return false;
+      return true;
+    });
+    const filteredPayments = p.payments.filter(x => {
+      if(statementFromDate && x.date < statementFromDate) return false;
+      if(statementToDate && x.date > statementToDate) return false;
+      return true;
+    });
+
+    const earned = filteredEntries.reduce((s,e)=> s+calcEntryTotal(e, getPriceSetForDate(db,e.date), p), 0);
+    const paid = filteredPayments.reduce((s,x)=> s+(parseFloat(x.amount)||0), 0);
+    const remaining = earned - paid;
+    // الرصيد المرحّل من قبل بداية الفترة
+    const isBefore = d => !!statementFromDate && (d||'') < statementFromDate;
+    const openingEarned = p.entries.filter(e=>isBefore(e.date)).reduce((s,e)=> s+calcEntryTotal(e, getPriceSetForDate(db,e.date), p), 0);
+    const openingPaid = p.payments.filter(x=>isBefore(x.date)).reduce((s,x)=> s+(parseFloat(x.amount)||0), 0);
+    const opening = openingEarned - openingPaid;
+    const finalBalance = opening + remaining;
+    const box = (label, value, bg, color) => `<div style="flex:1; background:${bg}; color:${color}; border-radius:12px; padding:12px; text-align:center;"><div style="font-size:11px; opacity:.85;">${label}</div><div style="font-weight:900; font-size:16px;">${num(value)}</div></div>`;
+
+    const dateRangeLabel = (statementFromDate || statementToDate) 
+      ? `الفترة: من ${statementFromDate||'البداية'} إلى ${statementToDate||'الآن'}` 
+      : 'تقرير شامل';
+
+    const entryHeaders = ['التاريخ', ...tableColumns.map(c=>c.label), 'الإجمالي الصافي'];
+    const entryRows = filteredEntries.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(e=>{
+      const own = rowColumnsFor(e);
+      return [
+        formatDateWithDay(e.date),
+        ...tableColumns.map(c=>{
+          if(!own.some(x=>x.key===c.key)) return '—';
+          const v = e[c.key];
+          if(c.type==='checkbox') return v?'نعم':'لا';
+          if(v===''||v===undefined||v===null) return '—';
+          return c.type==='number' ? num(v) : v;
+        }),
+        num(calcEntryTotal(e, getPriceSetForDate(db,e.date), p))
+      ];
+    });
+    const paymentRows = filteredPayments.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(x=>[formatDateWithDay(x.date), num(x.amount)+' جنيه', x.note||'—']);
+    
+    return `
+      <div style="font-size:22px; font-weight:900; color:#25422C; margin-bottom:2px;">كشف حساب تفصيلي - ${personLabel}</div>
+      <div style="font-size:16px; font-weight:700; color:#3D6144; margin-bottom:4px;">${escHtml(p.name)}</div>
+      <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:14px;">${dateRangeLabel}</div>
+      <div style="font-size:13px; font-weight:700; color:#25422C; margin-bottom:6px;">ملخص حساب الفترة</div>
+      <div style="display:flex; gap:12px; margin-bottom:18px;">
+        ${statementFromDate ? box('رصيد سابق مرحّل (قبل '+statementFromDate+')', opening, '#EEF2EA', '#25422C') : ''}
+        ${box('المستحق للفترة', earned, '#F8FAFC', '#23302B')}
+        ${box('المدفوع للفترة', paid, '#FEF3C7', '#92400E')}
+        ${box(statementFromDate ? 'الباقي الإجمالي (بالمرحّل)' : 'الباقي', finalBalance, finalBalance>0?'#DC2626':'#0F291E', '#fff')}
+      </div>
+      <div style="font-size:13px; font-weight:700; color:#25422C; margin-bottom:4px;">تفاصيل كل العمليات (${filteredEntries.length})</div>
+      ${pdfTable(entryHeaders, entryRows)}
+      <div style="font-size:13px; font-weight:700; color:#25422C; margin-bottom:4px;">تفاصيل ${paymentsLabel||'السلف / المدفوعات'} (${filteredPayments.length})</div>
+      ${pdfTable(['التاريخ','المبلغ','ملاحظة'], paymentRows)}`;
+  }
+
+  const entryTableColumns = [
+    ...tableColumns,
+    ...(extraColumns||[]),
+    {key:'_total', label:'الإجمالي بعد الخصم (الصافي)', computed:true, render: row=>num(calcEntryTotal(row, getPriceSetForDate(db,row.date), person))}
+  ];
+
+  return (
+    <div className={hideHeader?'':'p-5 md:p-8'}>
+      {!hideHeader && <VerseHeader text={verse}/>}
+      {!hideHeader && <h1 className="font-display text-3xl text-leaf-deep mb-6 flex items-center gap-2"><Icon name={icon} className="w-7 h-7"/>{title}</h1>}
+      
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="lg:w-80 shrink-0 bg-white/80 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-5 h-fit">
+          <div className="flex gap-2 mb-4">
+            <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder={'اسم '+personLabel+' جديد'}
+              onKeyDown={e=>e.key==='Enter' && addPerson()}
+              className="flex-1 rounded-xl border border-leaf-line/60 bg-white/50 px-4 py-2 text-sm focus:bg-white shadow-sm"/>
+            <button onClick={addPerson} className="bg-gradient-to-r from-leaf-mid to-leaf-deep text-cream rounded-xl px-4 shadow-sm hover:shadow-md"><Icon name="plus" className="w-5 h-5"/></button>
+          </div>
+          {people.length===0 && <p className="text-sm text-ink/40 text-center py-6">لسه مفيش {personLabel} مسجل</p>}
+          <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+            {people.map(p=>{
+              const t = totals(p);
+              return (
+                <button key={p.id} onClick={()=>setSelected(p.id)}
+                  className={`w-full text-right px-4 py-3 rounded-2xl flex items-center justify-between transition-all duration-300 ${selected===p.id?'bg-leaf-pale/70 shadow-sm border border-leaf-line/50':'hover:bg-creamdark/30 border border-transparent'}`}>
+                  <span className="font-bold text-[15px]">{p.name}</span>
+                  <span className={`text-sm num font-black ${t.remaining>0?'text-rust':'text-leaf-mid'}`}>{num(t.remaining)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {!person && (
+            <div className="bg-white border border-dashed border-leaf-line rounded-2xl p-10 text-center text-ink/50">
+              اختر {personLabel} من القائمة، أو ضيف واحد جديد للبدء
+            </div>
+          )}
+          {person && (()=>{
+            const t = totals(person);
+            return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-4 bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-card border border-leaf-line/30">
+                <div>
+                  <h2 className="text-2xl font-bold text-ink">{person.name}</h2>
+                  <p className="text-xs text-ink/50">كشف الحساب والعمليات التفصيلية</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 border border-leaf-line/40 bg-creamdark/30 px-3 py-1.5 rounded-2xl text-sm shadow-inner">
+                    <span className="text-ink/60 font-bold">من:</span>
+                    <input type="date" value={statementFromDate} onChange={e=>setStatementFromDate(e.target.value)} className="rounded-xl border border-leaf-line/50 px-2 py-1 text-xs num bg-white/70 shadow-sm"/>
+                    <span className="text-ink/60 font-bold">إلى:</span>
+                    <input type="date" value={statementToDate} onChange={e=>setStatementToDate(e.target.value)} className="rounded-xl border border-leaf-line/50 px-2 py-1 text-xs num bg-white/70 shadow-sm"/>
+                  </div>
+                  <button onClick={()=>downloadPdf(statementHtml(person), person.name+' - كشف حساب تفصيلي.pdf')} className="text-xs px-4 py-2.5 rounded-2xl border border-leaf-line/50 flex items-center gap-1.5 text-leaf-deep bg-white shadow-sm hover:shadow-md hover:bg-leaf-pale/20 font-bold transition-all"><Icon name="download" className="w-4 h-4"/>تنزيل PDF</button>
+                  <button onClick={()=>sharePdf(statementHtml(person), person.name+' - كشف حساب تفصيلي.pdf')} className="text-xs px-4 py-2.5 rounded-2xl border border-[#25D366]/30 flex items-center gap-1.5 text-[#128C7E] bg-white shadow-sm hover:shadow-md hover:bg-[#25D366]/10 font-bold transition-all"><Icon name="whatsapp" className="w-4 h-4"/>واتساب</button>
+                  <button onClick={()=>removePerson(person.id)} className="text-rust text-xs flex items-center gap-1 hover:bg-rust-light/30 px-3 py-2 rounded-xl transition-colors"><Icon name="trash" className="w-4 h-4"/>حذف</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white rounded-xl border border-leaf-line/30 p-4 text-center"><div className="text-xs text-ink/50 mb-1">المستحق</div><div className="font-bold num">{num(t.earned)}</div></div>
+                <div className="bg-white rounded-xl border border-leaf-line/30 p-4 text-center"><div className="text-xs text-ink/50 mb-1">المدفوع</div><div className="font-bold num text-gold-dark">{num(t.paid)}</div></div>
+                <div className={`rounded-xl p-4 text-center ${t.remaining>0?'bg-rust text-white':'bg-leaf-deep text-cream'}`}><div className="text-xs opacity-80 mb-1">الباقي</div><div className="font-bold num">{num(t.remaining)}</div></div>
+              </div>
+
+              {(personType === 'worker' || title === 'أنفار النوالة') && (()=>{
+                const workerPresent = (person.entries || []).filter(e => e.present).length;
+                const workerAbsent = (person.entries || []).filter(e => !e.present).length;
+                const totalAllPresent = (people || []).reduce((s, p) => s + (p.entries||[]).filter(e => e.present).length, 0);
+                const totalAllAbsent = (people || []).reduce((s, p) => s + (p.entries||[]).filter(e => !e.present).length, 0);
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rise">
+                    <StatCard label={`أيام حضور (${person.name})`} value={num(workerPresent) + ' يوم'} icon="check" tone="leaf"/>
+                    <StatCard label={`أيام غياب (${person.name})`} value={num(workerAbsent) + ' يوم'} icon="debt" tone="rust"/>
+                  </div>
+                );
+              })()}
+
+              {/* Cumulative Worker Production Breakdown */}
+              {(personType === 'sakina_worker' || personLabel === 'عاملة' || personType === 'takhrit' || title === 'أنفار التخريط الثابتين' || title === 'البنادير') && (
+                <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4 rise">
+                  <h3 className="font-bold text-sm text-leaf-deep mb-3 flex items-center gap-2">
+                    <Icon name="box" className="w-4 h-4"/> إجمالي إنتاج ({person.name}) حسب الصنف حتى الآن
+                  </h3>
+                  {(personType === 'sakina_worker' || personLabel === 'عاملة') ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { label: 'هارت (من غير قشر)', match: e => e.itemType === 'هارت' && !e.tookPeel },
+                        { label: 'هارت (مع القشر)', match: e => e.itemType === 'هارت' && e.tookPeel },
+                        { label: 'كاسات (من غير قشر)', match: e => e.itemType === 'كاسات' && !e.tookPeel },
+                        { label: 'كاسات (مع القشر)', match: e => e.itemType === 'كاسات' && e.tookPeel },
+                        { label: 'حشو (من غير قشر)', match: e => e.itemType === 'حشو' && !e.tookPeel },
+                        { label: 'حشو (مع القشر)', match: e => e.itemType === 'حشو' && e.tookPeel },
+                      ].map(item => {
+                        const count = (person.entries || []).filter(item.match).reduce((s, e) => s + (parseFloat(e.pieces) || 0), 0);
+                        return (
+                          <div key={item.label} className="bg-cream/60 border border-leaf-line/30 rounded-xl p-2.5 text-right">
+                            <div className="text-[11px] text-ink/60 font-bold mb-0.5">{item.label}</div>
+                            <div className="text-sm font-black text-leaf-deep num">{num(count)} قطعة</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {['قطع', 'قرص', 'شرايح', 'حدوة'].map(bType => {
+                        const count = (person.entries || []).filter(e => e.barrelType === bType).reduce((s, e) => s + (parseFloat(e.barrels) || 0), 0);
+                        return (
+                          <div key={bType} className="bg-cream/60 border border-leaf-line/30 rounded-xl p-2.5 text-right">
+                            <div className="text-[11px] text-ink/60 font-bold mb-0.5">{bType}</div>
+                            <div className="text-sm font-black text-leaf-deep num">{num(count)} برميل</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+                <h3 className="font-bold text-sm text-leaf-deep mb-3">{entryLabel||'العمليات'}</h3>
+                <form onSubmit={e => { e.preventDefault(); addEntry(); }}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                    <div><label className="block text-xs text-ink/50 mb-1">التاريخ</label><FieldInput field={{type:'date',label:'التاريخ'}} value={entryForm.date} onChange={v=>setEntryForm({...entryForm,date:v})}/></div>
+                    {activeColumns.map(c=>(
+                      <div key={c.key} className={c.type==='checkbox'?'flex items-end pb-2':''}>
+                        {c.type!=='checkbox' && <label className="block text-xs text-ink/50 mb-1">{c.label}</label>}
+                        <FieldInput field={c} value={entryForm[c.key]} onChange={v=>{ const next = {...entryForm,[c.key]:v}; setEntryForm(fixSelectValues(next, rowColumnsFor(next))); }}/>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="submit" className="bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-lg px-4 py-2 flex items-center gap-2 mb-2"><Icon name="plus" className="w-4 h-4"/>إضافة (Enter)</button>
+                </form>
+
+                {weeklyGrouping ? (
+                  groupByWeek(person.entries).length===0
+                  ? <p className="text-sm text-ink/40 text-center py-6">لسه مفيش قيود</p>
+                  : groupByWeek(person.entries).map(week=>{
+                    const qtySum = weeklyQtyField ? week.items.reduce((s,e)=>s+(parseFloat(e[weeklyQtyField.key])||0),0) : null;
+                    return (
+                      <div key={week.weekStart} className="mb-4 mt-3">
+                        <div className="flex items-center justify-between bg-leaf-pale/60 rounded-lg px-3 py-2 mb-1">
+                          <span className="text-sm font-bold text-leaf-deep">أسبوع {week.label}</span>
+                          {weeklyQtyField && <span className="text-xs text-ink/60 num">إجمالي {weeklyQtyField.label}: {num(qtySum)}</span>}
+                        </div>
+                        <div className="overflow-x-auto ledger-lines rounded-lg border border-leaf-line/20">
+                          <EditableTable
+                            columns={[{key:'date',label:'التاريخ',type:'date'}, ...entryTableColumns]}
+                            rows={week.items}
+                            onUpdate={(id,draft)=>editEntry(id,draft)}
+                            onDelete={(id)=>removeEntry(id)}
+                            person={person}
+                            getRowColumns={typeof entryColumns === 'function' ? rowColumnsFor : null}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="overflow-x-auto ledger-lines rounded-lg border border-leaf-line/20 mt-2">
+                    <EditableTable
+                      columns={[{key:'date',label:'التاريخ',type:'date'}, ...entryTableColumns]}
+                      rows={person.entries}
+                      onUpdate={(id,draft)=>editEntry(id,draft)}
+                      onDelete={(id)=>removeEntry(id)}
+                      person={person}
+                      getRowColumns={typeof entryColumns === 'function' ? rowColumnsFor : null}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+                <h3 className="font-bold text-sm text-leaf-deep mb-3">{paymentsLabel||'السلف / المدفوعات'}</h3>
+                <form onSubmit={e => { e.preventDefault(); addPayment(); }}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+                    <div><label className="block text-xs text-ink/50 mb-1">التاريخ</label><FieldInput field={{type:'date',label:'التاريخ'}} value={paymentForm.date} onChange={v=>setPaymentForm({...paymentForm,date:v})}/></div>
+                    <div><label className="block text-xs text-ink/50 mb-1">المبلغ</label><FieldInput field={{type:'number',label:'المبلغ'}} value={paymentForm.amount} onChange={v=>setPaymentForm({...paymentForm,amount:v})}/></div>
+                    <div><label className="block text-xs text-ink/50 mb-1">ملاحظة</label><FieldInput field={{type:'text',label:'ملاحظة'}} value={paymentForm.note} onChange={v=>setPaymentForm({...paymentForm,note:v})}/></div>
+                  </div>
+                  <button type="submit" className="bg-gold hover:bg-gold-dark text-white text-sm rounded-lg px-4 py-2 flex items-center gap-2 mb-2"><Icon name="plus" className="w-4 h-4"/>تسجيل دفعة (Enter)</button>
+                </form>
+                <div className="overflow-x-auto ledger-lines rounded-lg border border-leaf-line/20 mt-2">
+                  <EditableTable
+                    columns={[{key:'date',label:'التاريخ',type:'date'},{key:'amount',label:'المبلغ',type:'number'},{key:'note',label:'ملاحظة',type:'text'}]}
+                    rows={person.payments}
+                    onUpdate={(id,draft)=>editPayment(id,draft)}
+                    onDelete={(id)=>removePayment(id)}
+                    emptyLabel="لسه مفيش دفعات"
+                    person={person}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom Section 1: Weekly Pricing for specific person */}
+              {showWeeklyPricing && (
+                <PersonWeeklyPricing person={person} personType={personType||'factory'} onSavePrices={async (weeklyPrices)=>{
+                  if(remote && remote.saveWeeklyPrices){
+                    await remote.saveWeeklyPrices(person.id, weeklyPrices);
+                    setPeople(people.map(p => p.id === person.id ? {...p, weeklyPrices} : p));
+                  } else {
+                    setPeople(people.map(p => p.id === person.id ? {...p, weeklyPrices} : p));
+                  }
+                }}/>
+              )}
+            </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- REMOTE HELPERS (لتوصيل أي قسم "شخص+عمليات+دفعات" بسهولة) ---------------------------------------------------------- */
+function makePersonRemote(apiKey, fieldMap){
+  function mapEntryFromServer(e){
+    const o = { id:e.id, date:e.entry_date };
+    fieldMap.forEach(f=>{
+      const v = e[f.server];
+      o[f.local] = (v===null||v===undefined) ? (f.type==='bool'?false:'') : fixLegacy(v);
+    });
+    return o;
+  }
+  function mapEntryToServer(form){
+    const o = { entry_date: form.date };
+    fieldMap.forEach(f=>{
+      let v = form[f.local];
+      if(f.type==='bool') v = !!v;
+      else if(f.type==='number') v = (v===''||v===null||v===undefined) ? null : v;
+      o[f.server] = v;
+    });
+    return o;
+  }
+  const mapPaymentFromServer = x => ({ id:x.id, date:x.pay_date, amount:x.amount, note:x.note||'' });
+  const mapPaymentToServer = f => ({ pay_date:f.date, amount: parseFloat(f.amount)||0, note: f.note||'' });
+
+  return {
+    load: async ()=>{
+      const rows = await apiFetch('/api/'+apiKey);
+      return rows.map(row=>({ id:row.id, name:row.name, weeklyPrices: normalizeWeeklyPrices(row.weeklyPrices || row.weekly_prices), entries:(row.entries||[]).map(mapEntryFromServer), payments:(row.payments||[]).map(mapPaymentFromServer) }));
+    },
+    addPerson: async (name)=>{
+      const p = await apiFetch('/api/'+apiKey, {method:'POST', body:JSON.stringify({name})});
+      return { id:p.id, name:p.name, entries:[], payments:[] };
+    },
+    deletePerson: async (id)=>{ await apiFetch(`/api/${apiKey}/${id}`, {method:'DELETE'}); },
+    addEntry: async (personId, form)=>{
+      const e = await apiFetch(`/api/${apiKey}/${personId}/entries`, {method:'POST', body:JSON.stringify(mapEntryToServer(form))});
+      return mapEntryFromServer(e);
+    },
+    updateEntry: async (entryId, draft)=>{
+      const e = await apiFetch(`/api/${apiKey}-entries/${entryId}`, {method:'PUT', body:JSON.stringify(mapEntryToServer(draft))});
+      return mapEntryFromServer(e);
+    },
+    deleteEntry: async (entryId)=>{ await apiFetch(`/api/${apiKey}-entries/${entryId}`, {method:'DELETE'}); },
+    addPayment: async (personId, form)=>{
+      const x = await apiFetch(`/api/${apiKey}/${personId}/payments`, {method:'POST', body:JSON.stringify(mapPaymentToServer(form))});
+      return mapPaymentFromServer(x);
+    },
+    updatePayment: async (paymentId, draft)=>{
+      const x = await apiFetch(`/api/${apiKey}-payments/${paymentId}`, {method:'PUT', body:JSON.stringify(mapPaymentToServer(draft))});
+      return mapPaymentFromServer(x);
+    },
+    deletePayment: async (paymentId)=>{ await apiFetch(`/api/${apiKey}-payments/${paymentId}`, {method:'DELETE'}); },
+    saveWeeklyPrices: async (personId, weeklyPrices)=>{
+      await apiFetch(`/api/${apiKey}/${personId}`, {method:'PUT', body:JSON.stringify({ weekly_prices: weeklyPrices })});
+    },
+  };
+}
+
+function ConnectedPersonPage({title, icon, personLabel, entryLabel, paymentsLabel, entryColumns, extraColumns, calcEntryTotal, remote, db, weeklyGrouping, weeklyQtyField, hideHeader, verse, showWeeklyPricing, personType}){
+  const [people,setPeople] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{ setPeople(await remote.load()); }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل البيانات من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  return <PersonAccount title={title} icon={icon} personLabel={personLabel} entryLabel={entryLabel} paymentsLabel={paymentsLabel}
+    entryColumns={entryColumns} extraColumns={extraColumns} calcEntryTotal={calcEntryTotal}
+    db={db} people={people} setPeople={setPeople} remote={remote}
+    weeklyGrouping={weeklyGrouping} weeklyQtyField={weeklyQtyField} hideHeader={hideHeader} verse={verse}
+    showWeeklyPricing={showWeeklyPricing} personType={personType}/>;
+}
+
+/* ---------------------------------------------------------- MODULE PAGES ---------------------------------------------------------- */
+function mapJalabEntryFromServer(e){ return { id:e.id, date:e.entry_date, kuz:e.kuz, price:(e.price===null||e.price===undefined)?'':e.price, itemType:fixLegacy(e.item_type||'') }; }
+
+// حساب توريد الجلاب: سعر مكتوب في القيد ← تسعيرة الجلاب الخاصة بالأسبوع (للنوع ثم «عام») ← سعر الكوز العام
+function calcJalabEntry(e, ps, person){
+  const kuz = parseFloat(e.kuz) || 0;
+  const manual = e.price;
+  if(manual !== '' && manual !== null && manual !== undefined && !isNaN(manual)) return kuz * parseFloat(manual);
+  const wk = getPersonWeeklyConfig(person, e.date);
+  const pick = v => (v !== undefined && v !== '' && v !== null && !isNaN(v)) ? parseFloat(v) : null;
+  if(wk && wk.prices){
+    const own = pick(wk.prices[fixLegacy(e.itemType)]);
+    if(own !== null) return kuz * own;
+    const general = pick(wk.prices['عام']);
+    if(general !== null) return kuz * general;
+  }
+  return kuz * (parseFloat(ps.jalabPerKuz) || 0);
+}
+function mapJalabPaymentFromServer(x){ return { id:x.id, date:x.pay_date, amount:x.amount, note:x.note||'' }; }
+
+function JalabaPage({db,setDb}){
+  const [people,setPeople] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+
+  useEffect(()=>{ load(); }, []);
+
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const rows = await apiFetch('/api/jalaba');
+      setPeople(rows.map(row=>({
+        id: row.id, name: row.name, weeklyPrices: normalizeWeeklyPrices(row.weeklyPrices || row.weekly_prices),
+        entries: (row.entries||[]).map(mapJalabEntryFromServer),
+        payments: (row.payments||[]).map(mapJalabPaymentFromServer),
+      })));
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  const entryColumns = [
+    {key:'kuz', label:'عدد الكوازين', type:'number'},
+    {key:'itemType', label:'نوع الخرشوف', type:'select', options:['فرنساوي','بلدي','غير ذلك']},
+    {key:'price', label:'سعر الكوز (اختياري)', type:'number'},
+  ];
+  const calcEntryTotal = calcJalabEntry;
+
+  const remote = {
+    addPerson: async (name)=>{
+      const p = await apiFetch('/api/jalaba', {method:'POST', body:JSON.stringify({name})});
+      return { id:p.id, name:p.name, entries:[], payments:[] };
+    },
+    deletePerson: async (id)=>{ await apiFetch('/api/jalaba/'+id, {method:'DELETE'}); },
+    addEntry: async (personId, form)=>{
+      const e = await apiFetch(`/api/jalaba/${personId}/entries`, {method:'POST', body:JSON.stringify({
+        entry_date: form.date, kuz: form.kuz || 0, price: (form.price===''||form.price==null)?null:form.price, item_type: form.itemType||null
+      })});
+      return mapJalabEntryFromServer(e);
+    },
+    updateEntry: async (entryId, draft)=>{
+      const e = await apiFetch('/api/jalaba-entries/'+entryId, {method:'PUT', body:JSON.stringify({
+        entry_date: draft.date, kuz: draft.kuz || 0, price: (draft.price===''||draft.price==null)?null:draft.price, item_type: draft.itemType||null
+      })});
+      return mapJalabEntryFromServer(e);
+    },
+    deleteEntry: async (entryId)=>{ await apiFetch('/api/jalaba-entries/'+entryId, {method:'DELETE'}); },
+    addPayment: async (personId, form)=>{
+      const x = await apiFetch(`/api/jalaba/${personId}/payments`, {method:'POST', body:JSON.stringify({
+        pay_date: form.date, amount: parseFloat(form.amount)||0, note: form.note||''
+      })});
+      return mapJalabPaymentFromServer(x);
+    },
+    updatePayment: async (paymentId, draft)=>{
+      const x = await apiFetch('/api/jalaba-payments/'+paymentId, {method:'PUT', body:JSON.stringify({
+        pay_date: draft.date, amount: parseFloat(draft.amount)||0, note: draft.note||''
+      })});
+      return mapJalabPaymentFromServer(x);
+    },
+    deletePayment: async (paymentId)=>{ await apiFetch('/api/jalaba-payments/'+paymentId, {method:'DELETE'}); },
+    saveWeeklyPrices: async (personId, weeklyPrices)=>{
+      await apiFetch('/api/jalaba/'+personId, {method:'PUT', body:JSON.stringify({ weekly_prices: weeklyPrices })});
+    },
+  };
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل بيانات الجلابة من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  return <PersonAccount title="الجلابة" icon="truck" personLabel="جلاب" entryLabel="التوريدات" paymentsLabel="الواصل / المدفوعات" showWeeklyPricing personType="jalab"
+    verse="﴿اللَّهُ الَّذِي خَلَقَ السَّمَاوَاتِ وَالْأَرْضَ وَأَنزَلَ مِنَ السَّمَاءِ مَاءً فَأَخْرَجَ بِهِ مِنَ الثَّمَرَاتِ رِزْقًا لَّكُمْ﴾"
+    entryColumns={entryColumns} calcEntryTotal={calcEntryTotal}
+    db={db} people={people} setPeople={setPeople} remote={remote}
+    weeklyGrouping weeklyQtyField={{key:'kuz',label:'كوازين'}}/>;
+}
+
+function RaseefPage({db,setDb}){
+  const getEntryColumns = (form) => {
+    const isGreen = isGreenKind(form.kind);
+    const itemOptions = isGreen 
+      ? ['فرنساوي', 'بلدي', 'فرزة'] 
+      : ['قطع', 'كاسات', 'قرص', 'حشو', 'شرايح', 'حدوة'];
+    const cols = [
+      {key:'kind', label:'نوع التسليم', type:'select', options:['مصنع','أخضر']},
+      {key:'itemType', label:'النوع', type:'select', options: itemOptions},
+    ];
+
+    if(!isGreen){
+      cols.push({key:'grade', label:'الدرجة', type:'select', options:['درجة أولى', 'درجة ثانية']});
+    }
+
+    cols.push(
+      {key:'quantity', label: isGreen ? 'الكمية (كوز)' : 'الكمية (كيلو)', type:'number'},
+      {key:'price', label: isGreen ? 'سعر الكوز' : 'سعر الكيلو', type:'number'}
+    );
+
+    if(!isGreen){
+      cols.push({key:'discount', label:'نسبة الخصم %', type:'number'});
+    }
+    cols.push({key:'note', label:'ملاحظة', type:'text'});
+    return cols;
+  };
+
+  const extraColumns = [
+    {key:'_priceDisplay', label:'السعر التلقائي/الفصلي', computed:true, render: (row, person) => {
+      const details = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, 'purchase');
+      if(details.missingPrice) return <span className="text-rust font-bold">بدون سعر</span>;
+      return details.price > 0 ? num(details.price) : '—';
+    }},
+    {key:'_rawTotal', label:'الإجمالي قبل الخصم', computed:true, render: (row, person) => {
+      const details = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, 'purchase');
+      return details.isGreen ? '—' : num(details.rawTotal);
+    }},
+    {key:'_discount', label:'الخصم %', computed:true, render: (row, person) => {
+      const details = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, 'purchase');
+      return details.isGreen ? '—' : (details.disc ? details.disc + '%' : '0%');
+    }}
+  ];
+
+  const remote = makePersonRemote('raseef', [
+    {local:'kind', server:'kind', type:'text'},
+    {local:'itemType', server:'item_type', type:'text'},
+    {local:'grade', server:'grade', type:'text'},
+    {local:'quantity', server:'quantity', type:'number'},
+    {local:'price', server:'price', type:'number'},
+    {local:'discount', server:'discount', type:'number'},
+    {local:'note', server:'note', type:'text'},
+  ]);
+
+  const calcEntryTotal = (e, ps, person) => {
+    return getEntryPricingDetails(e, ps, person, 'purchase').netTotal;
+  };
+
+  return <ConnectedPersonPage title="المشتريات" icon="truck" personLabel="بائع" entryLabel="اضافة كارتة مشتريات" paymentsLabel="الواصل / المدفوع للبائع"
+    verse="﴿يَا أَيُّهَا الَّذِينَ آمَنُوا لَا تَأْكُلُوا أَمْوَالَكُم بَيْنَكُم بِالْبَاطِلِ إِلَّا أَن تَكُونَ تِجَارَةً عَن تَرَاضٍ مِّنكُمْ﴾"
+    entryColumns={getEntryColumns}
+    extraColumns={extraColumns}
+    calcEntryTotal={calcEntryTotal}
+    remote={remote} db={db}
+    showWeeklyPricing personType="raseef"
+    weeklyGrouping/>;
+}
+
+function makeSakinaWorkersRemote(sakinaId){
+  function mapEntryFromServer(e){ return { id:e.id, date:e.entry_date, itemType:e.item_type||'', pieces:e.pieces, tookPeel:!!e.took_peel }; }
+  function mapEntryToServer(f){ return { entry_date:f.date, item_type:f.itemType||null, pieces:f.pieces||0, took_peel:!!f.tookPeel }; }
+  const mapPaymentFromServer = x => ({ id:x.id, date:x.pay_date, amount:x.amount, note:x.note||'' });
+  const mapPaymentToServer = f => ({ pay_date:f.date, amount: parseFloat(f.amount)||0, note: f.note||'' });
+  return {
+    load: async ()=>{
+      const rows = await apiFetch(`/api/sakinas/${sakinaId}/workers`);
+      return rows.map(row=>({ id:row.id, name:row.name, entries:(row.entries||[]).map(mapEntryFromServer), payments:(row.payments||[]).map(mapPaymentFromServer) }));
+    },
+    addPerson: async (name)=>{
+      const p = await apiFetch(`/api/sakinas/${sakinaId}/workers`, {method:'POST', body:JSON.stringify({name})});
+      return { id:p.id, name:p.name, entries:[], payments:[] };
+    },
+    deletePerson: async (id)=>{ await apiFetch('/api/sakina-workers/'+id, {method:'DELETE'}); },
+    addEntry: async (personId, form)=>{
+      const e = await apiFetch(`/api/sakina-workers/${personId}/entries`, {method:'POST', body:JSON.stringify(mapEntryToServer(form))});
+      return mapEntryFromServer(e);
+    },
+    updateEntry: async (entryId, draft)=>{
+      const e = await apiFetch(`/api/sakina-worker-entries/${entryId}`, {method:'PUT', body:JSON.stringify(mapEntryToServer(draft))});
+      return mapEntryFromServer(e);
+    },
+    deleteEntry: async (entryId)=>{ await apiFetch(`/api/sakina-worker-entries/${entryId}`, {method:'DELETE'}); },
+    addPayment: async (personId, form)=>{
+      const x = await apiFetch(`/api/sakina-workers/${personId}/payments`, {method:'POST', body:JSON.stringify(mapPaymentToServer(form))});
+      return mapPaymentFromServer(x);
+    },
+    updatePayment: async (paymentId, draft)=>{
+      const x = await apiFetch(`/api/sakina-worker-payments/${paymentId}`, {method:'PUT', body:JSON.stringify(mapPaymentToServer(draft))});
+      return mapPaymentFromServer(x);
+    },
+    deletePayment: async (paymentId)=>{ await apiFetch(`/api/sakina-worker-payments/${paymentId}`, {method:'DELETE'}); },
+  };
+}
+
+function SakinaPage({db,setDb}){
+  const [sakinas,setSakinas] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+  const [selectedSakina,setSelectedSakina] = useState(null);
+  const [newSakina,setNewSakina] = useState('');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const rows = await apiFetch('/api/sakinas');
+      setSakinas(rows);
+      if(rows.length) setSelectedSakina(prev => prev || rows[0].id);
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+  async function addSakina(){
+    if(!newSakina.trim()) return;
+    try{
+      const s = await apiFetch('/api/sakinas', {method:'POST', body:JSON.stringify({name:newSakina.trim()})});
+      setSakinas([...sakinas, s]); setNewSakina(''); setSelectedSakina(s.id);
+    }catch(e){ alert(e.message); }
+  }
+  async function removeSakina(id){
+    if(!confirm('تأكيد حذف النوالة بكل عاملاتها؟')) return;
+    try{ await apiFetch('/api/sakinas/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setSakinas(sakinas.filter(s=>s.id!==id));
+    if(selectedSakina===id) setSelectedSakina(null);
+  }
+
+  const entryColumns = [
+    {key:'itemType', label:'النوع', type:'select', options:['هارت','كاسات','حشو']},
+    {key:'pieces', label:'عدد القطع', type:'number'},
+    {key:'tookPeel', label:'أخذت القشر', type:'checkbox'},
+  ];
+  const calcEntryTotal = (e,ps)=> (e.pieces||0)/1000 * ((ps.niswan[e.itemType]||{})[e.tookPeel?'withPeel':'withoutPeel']||0);
+
+  const sakina = sakinas.find(s=>s.id===selectedSakina) || null;
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل النوالات من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  return (
+    <div className="p-5 md:p-8">
+      <VerseHeader text="﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَى أَهْلِهَا﴾"/>
+      <h1 className="font-display text-3xl text-leaf-deep mb-2 flex items-center gap-2"><Icon name="leaf" className="w-7 h-7"/>النوالات</h1>
+      <p className="text-ink/50 text-sm mb-6">كل نوالة هي مكان تقشير له عاملاته الخاصين بيه.</p>
+      <div className="flex items-center gap-2 flex-wrap mb-6">
+        {sakinas.map(s=>(
+          <button key={s.id} onClick={()=>setSelectedSakina(s.id)}
+            className={`px-4 py-2 rounded-full text-sm font-bold ${selectedSakina===s.id?'bg-leaf-deep text-cream':'bg-white border border-leaf-line text-ink/70'}`}>
+            {s.name}
+          </button>
+        ))}
+        <div className="flex items-center gap-1">
+          <input value={newSakina} onChange={e=>setNewSakina(e.target.value)} placeholder="اسم نوالة جديدة" onKeyDown={e=>e.key==='Enter'&&addSakina()} className="rounded-lg border border-leaf-line px-3 py-2 text-sm w-40"/>
+          <button onClick={addSakina} className="bg-leaf-deep text-cream rounded-lg px-3 py-2"><Icon name="plus" className="w-4 h-4"/></button>
+        </div>
+      </div>
+
+      {sakinas.length===0 && <div className="bg-white border border-dashed border-leaf-line rounded-2xl p-10 text-center text-ink/50">ضيف أول نوالة عشان تبدأ تسجل العاملات فيها</div>}
+
+      {sakina && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-leaf-deep">عاملات: {sakina.name}</h2>
+            <button onClick={()=>removeSakina(sakina.id)} className="text-rust text-xs flex items-center gap-1 hover:underline"><Icon name="trash" className="w-4 h-4"/>حذف النوالة</button>
+          </div>
+          <ConnectedPersonPage key={sakina.id} hideHeader personLabel="عاملة" entryLabel="عمليات التقشير" personType="sakina_worker"
+            entryColumns={entryColumns} calcEntryTotal={calcEntryTotal}
+            remote={makeSakinaWorkersRemote(sakina.id)} db={db}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TakhritPage({db,setDb}){
+  const [tab,setTab] = useState('fixed');
+  const entryColumns = [
+    {key:'barrelType', label:'نوع الخرطة', type:'select', options:['قطع','قرص','شرايح','حدوة']},
+    {key:'barrels', label:'عدد البراميل', type:'number'},
+    {key:'price', label:'سعر البرميل (اختياري)', type:'number'},
+  ];
+  const calcEntryTotal = (e,ps)=> (e.barrels||0) * ((e.price!==''&&e.price!=null&&!isNaN(e.price)) ? e.price : (ps.takhrit[e.barrelType]||0));
+  const fieldMap = [
+    {local:'barrelType', server:'barrel_type', type:'text'},
+    {local:'barrels', server:'barrels', type:'number'},
+    {local:'price', server:'price', type:'number'},
+  ];
+  const fixedRemote = makePersonRemote('takhrit-fixed', fieldMap);
+  const banadeerRemote = makePersonRemote('banadeer', fieldMap);
+  return (
+    <div>
+      <div className="px-5 md:px-8 pt-6 flex gap-2">
+        <button onClick={()=>setTab('fixed')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${tab==='fixed'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>أنفار التخريط الثابتين</button>
+        <button onClick={()=>setTab('banadeer')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${tab==='banadeer'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>البنادير</button>
+      </div>
+      {tab==='fixed'
+        ? <ConnectedPersonPage key="fixed" title="أنفار التخريط الثابتين" icon="blade" personLabel="نفر" entryLabel="عمليات التخريط" personType="takhrit" verse="﴿إِنَّ اللَّهَ يَأْمُرُ بِالْعَدْلِ وَالْإِحْسَانِ﴾" entryColumns={entryColumns} calcEntryTotal={calcEntryTotal} remote={fixedRemote} db={db}/>
+        : <ConnectedPersonPage key="banadeer" title="البنادير" icon="blade" personLabel="نفر" entryLabel="عمليات التخريط" verse="﴿إِنَّ اللَّهَ يَأْمُرُ بِالْعَدْلِ وَالْإِحْسَانِ﴾" entryColumns={entryColumns} calcEntryTotal={calcEntryTotal} remote={banadeerRemote} db={db}/>
+      }
+    </div>
+  );
+}
+
+function mapWorkerEntryFromServer(e){ return { id:e.id, date:e.entry_date, present:!!e.present, performance:e.performance||'', note:e.note||'' }; }
+function mapWorkerPaymentFromServer(x){ return { id:x.id, date:x.pay_date, amount:x.amount, note:x.note||'' }; }
+
+function WorkersPage({db,setDb}){
+  const entryColumns = [
+    {key:'present', label:'حاضر', type:'checkbox'},
+    {key:'performance', label:'الأداء', type:'select', options:['ضعيف','كويس','ممتاز']},
+    {key:'note', label:'ملاحظة', type:'text'},
+  ];
+  const calcEntryTotal = (e,ps)=> e.present ? (ps.workerDailyWage||0) : 0;
+
+  const remote = {
+    load: async ()=>{
+      const rows = await apiFetch('/api/workers');
+      return rows.map(row=>({
+        id: row.id, name: row.name,
+        entries: (row.entries||[]).map(mapWorkerEntryFromServer),
+        payments: (row.payments||[]).map(mapWorkerPaymentFromServer),
+      }));
+    },
+    addPerson: async (name)=>{
+      const p = await apiFetch('/api/workers', {method:'POST', body:JSON.stringify({name})});
+      return { id:p.id, name:p.name, entries:[], payments:[] };
+    },
+    deletePerson: async (id)=>{ await apiFetch('/api/workers/'+id, {method:'DELETE'}); },
+    addEntry: async (personId, form)=>{
+      const e = await apiFetch(`/api/workers/${personId}/entries`, {method:'POST', body:JSON.stringify({
+        entry_date: form.date, present: !!form.present, performance: form.performance||null, note: form.note||''
+      })});
+      return mapWorkerEntryFromServer(e);
+    },
+    updateEntry: async (entryId, draft)=>{
+      const e = await apiFetch('/api/worker-entries/'+entryId, {method:'PUT', body:JSON.stringify({
+        entry_date: draft.date, present: !!draft.present, performance: draft.performance||null, note: draft.note||''
+      })});
+      return mapWorkerEntryFromServer(e);
+    },
+    deleteEntry: async (entryId)=>{ await apiFetch('/api/worker-entries/'+entryId, {method:'DELETE'}); },
+    addPayment: async (personId, form)=>{
+      const x = await apiFetch(`/api/workers/${personId}/payments`, {method:'POST', body:JSON.stringify({
+        pay_date: form.date, amount: parseFloat(form.amount)||0, note: form.note||''
+      })});
+      return mapWorkerPaymentFromServer(x);
+    },
+    updatePayment: async (paymentId, draft)=>{
+      const x = await apiFetch('/api/worker-payments/'+paymentId, {method:'PUT', body:JSON.stringify({
+        pay_date: draft.date, amount: parseFloat(draft.amount)||0, note: draft.note||''
+      })});
+      return mapWorkerPaymentFromServer(x);
+    },
+    deletePayment: async (paymentId)=>{ await apiFetch('/api/worker-payments/'+paymentId, {method:'DELETE'}); },
+  };
+
+  return (
+    <ConnectedPersonPage title="أنفار النوالة" icon="user" personLabel="نفر" entryLabel="أيام العمل"
+      verse="﴿وَقُلِ اعْمَلُوا فَسَيَرَى اللَّهُ عَمَلَكُمْ وَرَسُولُهُ وَالْمُؤْمِنُونَ﴾"
+      entryColumns={entryColumns} calcEntryTotal={calcEntryTotal}
+      remote={remote} db={db} personType="worker"/>
+  );
+}
+
+
+// mode: 'sales' (المصانع) أو 'purchase' (المشتريات/الرصيف)
+function getEntryPricingDetails(e, ps, person, mode='sales'){
+  const isGreen = isGreenKind(e.kind);
+  const qty = parseFloat(e.tons || e.quantity || e.kuz || 0);
+  
+  const gradeSuffix = (!isGreen && e.grade === 'درجة ثانية') ? ' (ثانية)' : ((!isGreen && e.grade === 'درجة أولى') ? ' (أولى)' : (!isGreen ? ' (أولى)' : ''));
+  const effectiveItemType = isGreen ? e.itemType : ((e.itemType||'') + gradeSuffix);
+
+  const personWeek = getPersonWeeklyConfig(person, e.date);
+  const personPrice = (personWeek && personWeek.prices && personWeek.prices[effectiveItemType] !== undefined && personWeek.prices[effectiveItemType] !== '' && !isNaN(personWeek.prices[effectiveItemType])) 
+    ? parseFloat(personWeek.prices[effectiveItemType]) 
+    : null;
+  const personDiscount = (personWeek && personWeek.discount !== undefined && personWeek.discount !== '' && !isNaN(personWeek.discount)) 
+    ? parseFloat(personWeek.discount) 
+    : null;
+
+  const rawManualPrice = e.pricePerTon !== undefined ? e.pricePerTon : e.price;
+  const hasManualPrice = (rawManualPrice !== '' && rawManualPrice != null && !isNaN(rawManualPrice));
+  // السعر العام من صفحة التسعير بيتطبق على المبيعات بس — المشتريات لازم سعر البائع أو سعر مكتوب
+  const salesTable = ps.sales || {};
+  const globalFallbackPrice = mode !== 'sales' ? 0
+    : (salesTable[effectiveItemType] !== undefined && salesTable[effectiveItemType] !== '' ? parseFloat(salesTable[effectiveItemType]) || 0
+      : (isGreen && salesTable['أخضر'] !== undefined ? parseFloat(salesTable['أخضر']) || 0 : 0));
+
+  
+  const price = hasManualPrice 
+    ? parseFloat(rawManualPrice) 
+    : (personPrice !== null ? personPrice : globalFallbackPrice);
+
+  const hasManualDiscount = (e.discount !== '' && e.discount != null && !isNaN(e.discount));
+  const disc = isGreen 
+    ? 0 
+    : (hasManualDiscount ? parseFloat(e.discount) : (personDiscount !== null ? personDiscount : 0));
+
+  const rawTotal = qty * price;
+  const netTotal = isGreen ? rawTotal : rawTotal * (1 - disc / 100);
+
+  const missingPrice = !hasManualPrice && personPrice === null && globalFallbackPrice === 0;
+  return { isGreen, qty, price, hasManualPrice, disc, hasManualDiscount, rawTotal, netTotal, missingPrice };
+}
+
+function SalesPage({db,setDb}){
+  const getEntryColumns = (form) => {
+    const isGreen = isGreenKind(form.kind);
+    const itemOptions = isGreen 
+      ? ['فرنساوي', 'بلدي', 'فرزة'] 
+      : ['قطع', 'كاسات', 'قرص', 'حشو', 'شرايح', 'حدوة'];
+
+    const cols = [
+      {key:'kind', label:'نوع التسليم', type:'select', options:['مصنع','أخضر']},
+      {key:'itemType', label:'النوع', type:'select', options: itemOptions},
+    ];
+
+    if(!isGreen){
+      cols.push({key:'grade', label:'الدرجة', type:'select', options:['درجة أولى', 'درجة ثانية']});
+    }
+
+    cols.push(
+      {key:'tons', label: isGreen ? 'العدد' : 'الكمية (كيلو)', type:'number'},
+      {key:'pricePerTon', label: isGreen ? 'سعر الكوز' : 'سعر الكيلو', type:'number'}
+    );
+
+    if(!isGreen){
+      cols.push({key:'discount', label:'نسبة الخصم %', type:'number'});
+    }
+
+    return cols;
+  };
+
+  const extraColumns = [
+    {key:'_priceDisplay', label:'السعر التلقائي/الفصلي', computed:true, render: (row, person) => {
+      const details = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person);
+      if(details.missingPrice) return <span className="text-rust font-bold">بدون سعر</span>;
+      return details.price > 0 ? num(details.price) : '—';
+    }},
+    {key:'_rawTotal', label:'الإجمالي قبل الخصم', computed:true, render: (row, person) => {
+      const details = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person);
+      return details.isGreen ? '—' : num(details.rawTotal);
+    }},
+    {key:'_discount', label:'الخصم %', computed:true, render: (row, person) => {
+      const details = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person);
+      return details.isGreen ? '—' : (details.disc ? details.disc + '%' : '0%');
+    }}
+  ];
+
+  const remote = makePersonRemote('factories', [
+    {local:'kind', server:'kind', type:'text'},
+    {local:'itemType', server:'item_type', type:'text'},
+    {local:'grade', server:'grade', type:'text'},
+    {local:'tons', server:'tons', type:'number'},
+    {local:'pricePerTon', server:'price_per_ton', type:'number'},
+    {local:'discount', server:'discount', type:'number'},
+  ]);
+
+  const calcEntryTotal = (e, ps, person) => {
+    return getEntryPricingDetails(e, ps, person).netTotal;
+  };
+
+  return <ConnectedPersonPage title="المبيعات" icon="receipt" personLabel="مصنع/تاجر" entryLabel="اضافة كارتة مبيعات"
+    verse="﴿وَمَا مِن دَابَّةٍ فِي الْأَرْضِ إِلَّا عَلَى اللَّهِ رِزْقُهَا﴾"
+    entryColumns={getEntryColumns}
+    extraColumns={extraColumns}
+    calcEntryTotal={calcEntryTotal}
+    remote={remote} db={db}
+    showWeeklyPricing personType="factory"
+    weeklyGrouping/>;
+}
+
+/* ---------------------------------------------------------- EXPENSES ---------------------------------------------------------- */
+function mapExpenseFromServer(x){ return { id:x.id, date:x.expense_date, category:x.category, customCategory:x.custom_category||'', name:x.name||'', amount:x.amount }; }
+function mapExpenseToServer(f){ return { expense_date:f.date, category:f.category, custom_category:f.customCategory||'', name:f.name||'', amount: parseFloat(f.amount)||0 }; }
+
+function ExpensesPage({db,setDb}){
+  const [tab,setTab]=useState('expenses');
+  const CATS = ['أكل','بودرة','سيتريك','سكاكين','أخرى'];
+  const [form,setForm] = useState({date:todayStr(), category:'أكل', customCategory:'', name:'', amount:''});
+  const [expenses,setExpenses] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const rows = await apiFetch('/api/expenses');
+      setExpenses(rows.map(mapExpenseFromServer));
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  async function add(){
+    if(!form.amount) return;
+    try{
+      const x = await apiFetch('/api/expenses', {method:'POST', body:JSON.stringify(mapExpenseToServer(form))});
+      setExpenses([mapExpenseFromServer(x), ...expenses]);
+      setForm({date:todayStr(), category:'أكل', customCategory:'', name:'', amount:''});
+    }catch(e){ alert(e.message); }
+  }
+  async function update(id,draft){
+    try{
+      const x = await apiFetch('/api/expenses/'+id, {method:'PUT', body:JSON.stringify(mapExpenseToServer(draft))});
+      setExpenses(expenses.map(e=>e.id===id?mapExpenseFromServer(x):e));
+    }catch(e){ alert(e.message); }
+  }
+  async function remove(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    try{ await apiFetch('/api/expenses/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setExpenses(expenses.filter(x=>x.id!==id));
+  }
+
+  const catLabel = x => x.category==='أخرى' ? (x.customCategory || 'أخرى') : x.category;
+  const todayTotal = expenses.filter(x=>x.date===todayStr()).reduce((s,x)=>s+x.amount,0);
+  const weekTotal = expenses.filter(x=>isCurrentWeek(x.date)).reduce((s,x)=>s+x.amount,0);
+  const byCat = {}; expenses.forEach(x=>{ const l=catLabel(x); byCat[l]=(byCat[l]||0)+x.amount; });
+
+  const columns = [
+    {key:'date', label:'التاريخ', type:'date'},
+    {key:'category', label:'النوع', type:'select', options:CATS},
+    {key:'customCategory', label:'تفاصيل النوع', type:'text'},
+    {key:'name', label:'وصف', type:'text'},
+    {key:'amount', label:'المبلغ', type:'number'},
+  ];
+
+  return (
+    <div className="p-5 md:p-8 space-y-6">
+      <VerseHeader text="﴿وَلَا تُبَذِّرْ تَبْذِيرًا * إِنَّ الْمُبَذِّرِينَ كَانُوا إِخْوَانَ الشَّيَاطِينِ وَكَانَ الشَّيْطَانُ لِرَبِّهِ كَفُورًا﴾"/>
+      <h1 className="font-display text-3xl text-leaf-deep flex items-center gap-2"><Icon name="wallet" className="w-7 h-7"/>المصاريف والعربيات والشركاء</h1>
+
+      <div className="flex gap-2">
+        <button onClick={()=>setTab('expenses')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${tab==='expenses'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>المصاريف</button>
+        <button onClick={()=>setTab('transport')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${tab==='transport'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>العربيات</button>
+        <button onClick={()=>setTab('partners')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${tab==='partners'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>الشركاء</button>
+      </div>
+
+      {tab==='expenses' && (
+        loading ? <div className="p-8 text-center text-ink/50">بيحمّل المصاريف من السيرفر...</div> :
+        error ? <div className="p-8 text-center"><p className="text-rust mb-3">حصل خطأ: {error}</p><button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button></div> :
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            <StatCard label="مصاريف اليوم" value={money(todayTotal)} icon="wallet" tone="white"/>
+            <StatCard label="مصاريف الأسبوع" value={money(weekTotal)} icon="wallet" tone="gold"/>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div><label className="block text-xs text-ink/50 mb-1">التاريخ</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+              <div><label className="block text-xs text-ink/50 mb-1">النوع</label>
+                <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm">
+                  {CATS.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              {form.category==='أخرى' && (
+                <div><label className="block text-xs text-ink/50 mb-1">حدد النوع</label><input value={form.customCategory} onChange={e=>setForm({...form,customCategory:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+              )}
+              <div><label className="block text-xs text-ink/50 mb-1">وصف</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm" placeholder="مثال: سكاكين جديدة"/></div>
+              <div><label className="block text-xs text-ink/50 mb-1">المبلغ</label><input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm num"/></div>
+            </div>
+            <button onClick={add} className="mt-3 bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-lg px-4 py-2 flex items-center gap-2"><Icon name="plus" className="w-4 h-4"/>إضافة مصروف</button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(byCat).map(([c,v])=>(
+              <span key={c} className="text-xs bg-leaf-pale text-leaf-deep px-3 py-1.5 rounded-full font-bold">{c}: {num(v)}</span>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 overflow-x-auto ledger-lines">
+            <EditableTable columns={columns} rows={expenses} onUpdate={update} onDelete={remove} emptyLabel="لسه مفيش مصاريف مسجلة"/>
+          </div>
+        </div>
+      )}
+
+      {tab==='transport' && <TransportSection db={db} setDb={setDb}/>}
+      {tab==='partners' && <PartnersSection db={db} setDb={setDb}/>}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- TRANSPORT (subsection of Expenses) ---------------------------------------------------------- */
+function TransportSection({db,setDb}){
+  const [factories,setFactories] = useState([]);
+  const [routes,setRoutes] = useState([]);
+
+  useEffect(()=>{ loadMeta(); }, []);
+  async function loadMeta(){
+    try{
+      const [fac, rts] = await Promise.all([apiFetch('/api/factories'), apiFetch('/api/transport-routes')]);
+      setFactories(fac.map(f=>f.name));
+      setRoutes(rts.map(r=>({from:r.from_location, to:r.to_location, price:r.price})));
+    }catch(e){ /* تجاهل، مش أساسي لعرض الصفحة */ }
+  }
+
+  const locationOptions = ['النوالة', ...factories, 'مكان آخر / مشوار غير اعتيادي'];
+  const entryColumns = [
+    {key:'fromLocation', label:'من', type:'select', options:locationOptions},
+    {key:'toLocation', label:'إلى', type:'select', options:locationOptions},
+    {key:'price', label:'سعر المشوار', type:'number'},
+    {key:'note', label:'ملاحظة', type:'text'},
+  ];
+  const remote = makePersonRemote('transport', [
+    {local:'fromLocation', server:'from_location', type:'text'},
+    {local:'toLocation', server:'to_location', type:'text'},
+    {local:'price', server:'price', type:'number'},
+    {local:'note', server:'note', type:'text'},
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+        <h3 className="font-bold text-sm text-leaf-deep mb-2">المشاوير الثابتة (للمراجعة — تتعدل من صفحة التسعير)</h3>
+        {routes.length===0 ? (
+          <p className="text-sm text-ink/40">لسه معملتش مشاوير ثابتة. ضيفها من صفحة التسعير.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {routes.map((r,i)=>(<span key={i} className="text-xs bg-leaf-pale text-leaf-deep px-3 py-1.5 rounded-full font-bold">{r.from} ← {r.to}: {num(r.price)}</span>))}
+          </div>
+        )}
+      </div>
+      <ConnectedPersonPage hideHeader personLabel="عربية" entryLabel="المشاوير"
+        entryColumns={entryColumns} calcEntryTotal={(e)=>e.price||0}
+        remote={remote} db={db}/>
+    </div>
+  );
+}
+function PartnersSection({db,setDb}){
+  const [newPartner,setNewPartner]=useState('');
+  const [form,setForm]=useState({date:todayStr(), partnerId:'', type:'سحب', amount:'', reason:''});
+  const [partnersList,setPartnersList]=useState([]);
+  const [partners,setPartners]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const [pl, tx] = await Promise.all([apiFetch('/api/partners-list'), apiFetch('/api/partner-transactions')]);
+      setPartnersList(pl);
+      setPartners(tx.map(x=>({ id:x.id, date:x.tx_date, partnerId:x.partner_id, type:x.type, amount:x.amount, reason:x.reason||'' })));
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  async function addPartnerName(){
+    if(!newPartner.trim()) return;
+    try{
+      const p = await apiFetch('/api/partners-list', {method:'POST', body:JSON.stringify({name:newPartner.trim()})});
+      setPartnersList([...partnersList, p]); setNewPartner('');
+    }catch(e){ alert(e.message); }
+  }
+  async function removePartnerName(id){
+    if(!confirm('حذف الشريك من القائمة؟')) return;
+    try{ await apiFetch('/api/partners-list/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setPartnersList(partnersList.filter(x=>x.id!==id));
+  }
+  function toServer(f){ return { partner_id:f.partnerId, tx_date:f.date, type:f.type, amount: parseFloat(f.amount)||0, reason:f.reason||'' }; }
+  function fromServer(x){ return { id:x.id, date:x.tx_date, partnerId:x.partner_id, type:x.type, amount:x.amount, reason:x.reason||'' }; }
+  async function add(){
+    if(!form.partnerId || !form.amount) return;
+    try{
+      const x = await apiFetch('/api/partner-transactions', {method:'POST', body:JSON.stringify(toServer(form))});
+      setPartners([fromServer(x), ...partners]);
+      setForm({date:todayStr(), partnerId:'', type:'سحب', amount:'', reason:''});
+    }catch(e){ alert(e.message); }
+  }
+  async function update(id,draft){
+    try{
+      const x = await apiFetch('/api/partner-transactions/'+id, {method:'PUT', body:JSON.stringify(toServer(draft))});
+      setPartners(partners.map(p=>p.id===id?fromServer(x):p));
+    }catch(e){ alert(e.message); }
+  }
+  async function remove(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    try{ await apiFetch('/api/partner-transactions/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setPartners(partners.filter(x=>x.id!==id));
+  }
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل بيانات الشركاء من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  const nameOf = id => (partnersList.find(p=>p.id===id)||{}).name || '—';
+  const byPartner = {};
+  partners.forEach(x=>{ const n=nameOf(x.partnerId); byPartner[n]=(byPartner[n]||0)+(x.type==='إيداع'?x.amount:-x.amount); });
+
+  function partnerStatementHtml(partnerId){
+    const p = partnersList.find(x=>x.id===partnerId);
+    const txs = partners.filter(x=>x.partnerId===partnerId).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const net = txs.reduce((s,x)=>s+(x.type==='إيداع'?x.amount:-x.amount),0);
+    const summary = `<div style="display:flex; gap:12px; margin-bottom:16px;">
+      <div style="flex:1; background:${net>=0?'#25422C':'#A34C3D'}; color:#fff; border-radius:10px; padding:12px; text-align:center;"><div style="font-size:11px; opacity:.85;">صافي رصيد الشريك</div><div style="font-weight:900; font-size:16px;">${num(net)}</div></div>
+    </div>`;
+    const table = pdfTable(['التاريخ','النوع','المبلغ','السبب'], txs.map(x=>[formatDateWithDay(x.date), x.type, num(x.amount), x.reason||'—']));
+    return `<div style="font-size:22px; font-weight:900; color:#25422C; margin-bottom:2px;">كشف حساب شريك</div>
+      <div style="font-size:16px; font-weight:700; color:#3D6144; margin-bottom:14px;">${p?p.name:''}</div>
+      ${summary}
+      <div style="font-size:13px; font-weight:700; color:#25422C; margin-bottom:4px;">كل العمليات</div>
+      ${table}`;
+  }
+
+  const partnerOptions = partnersList.map(p=>({value:p.id, label:p.name}));
+  const columns = [
+    {key:'date', label:'التاريخ', type:'date'},
+    {key:'partnerId', label:'الشريك', type:'select', options:partnerOptions, render: row=>nameOf(row.partnerId)},
+    {key:'type', label:'النوع', type:'select', options:['سحب','إيداع']},
+    {key:'amount', label:'المبلغ', type:'number'},
+    {key:'reason', label:'السبب', type:'text'},
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+        <h3 className="font-bold text-sm text-leaf-deep mb-2">أسماء الشركاء</h3>
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <input value={newPartner} onChange={e=>setNewPartner(e.target.value)} placeholder="اسم شريك جديد" onKeyDown={e=>e.key==='Enter'&&addPartnerName()} className="rounded-lg border border-leaf-line px-3 py-2 text-sm w-48"/>
+          <button onClick={addPartnerName} className="bg-leaf-deep text-cream rounded-lg px-3 py-2 text-sm flex items-center gap-1"><Icon name="plus" className="w-4 h-4"/>إضافة</button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {partnersList.map(p=>(
+            <span key={p.id} className="text-xs bg-leaf-pale text-leaf-deep px-3 py-1.5 rounded-full font-bold flex items-center gap-2">
+              {p.name} {byPartner[p.name]!==undefined && <span className="num">({num(byPartner[p.name])})</span>}
+              <button onClick={()=>downloadPdf(partnerStatementHtml(p.id), p.name+' - كشف حساب.pdf')} title="تنزيل PDF" className="text-leaf-mid hover:text-leaf-deep"><Icon name="download" className="w-3.5 h-3.5"/></button>
+              <button onClick={()=>sharePdf(partnerStatementHtml(p.id), p.name+' - كشف حساب.pdf')} title="واتساب" className="text-leaf-mid hover:text-leaf-deep"><Icon name="whatsapp" className="w-3.5 h-3.5"/></button>
+              <button onClick={()=>removePartnerName(p.id)} className="text-rust/60 hover:text-rust"><Icon name="trash" className="w-3 h-3"/></button>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div><label className="block text-xs text-ink/50 mb-1">التاريخ</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+          <div><label className="block text-xs text-ink/50 mb-1">الشريك</label>
+            <select value={form.partnerId} onChange={e=>setForm({...form,partnerId:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm">
+              <option value="" disabled>اختر الشريك</option>
+              {partnersList.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div><label className="block text-xs text-ink/50 mb-1">النوع</label>
+            <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm">
+              <option>سحب</option><option>إيداع</option>
+            </select>
+          </div>
+          <div><label className="block text-xs text-ink/50 mb-1">المبلغ</label><input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm num"/></div>
+          <div><label className="block text-xs text-ink/50 mb-1">السبب</label><input value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+        </div>
+        <button onClick={add} className="mt-3 bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-lg px-4 py-2 flex items-center gap-2"><Icon name="plus" className="w-4 h-4"/>إضافة عملية</button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 overflow-x-auto ledger-lines">
+        <EditableTable columns={columns} rows={partners} onUpdate={update} onDelete={remove} emptyLabel="لسه مفيش عمليات مسجلة"/>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- DEBTS ---------------------------------------------------------- */
+function mapDebtFromServer(x){ return { id:x.id, date:x.debt_date, lender:x.lender, amount:x.amount, repaid:x.repaid, reason:x.reason||'' }; }
+function mapDebtToServer(f){ return { debt_date:f.date, lender:f.lender, amount: parseFloat(f.amount)||0, repaid: parseFloat(f.repaid)||0, reason:f.reason||'' }; }
+
+function DebtsPage({db,setDb}){
+  const [form,setForm]=useState({date:todayStr(), lender:'', amount:'', repaid:'', reason:''});
+  const [debts,setDebts]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{ setDebts((await apiFetch('/api/debts')).map(mapDebtFromServer)); }
+    catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  async function add(){
+    if(!form.lender || !form.amount) return;
+    try{
+      const x = await apiFetch('/api/debts', {method:'POST', body:JSON.stringify(mapDebtToServer(form))});
+      setDebts([mapDebtFromServer(x), ...debts]);
+      setForm({date:todayStr(), lender:'', amount:'', repaid:'', reason:''});
+    }catch(e){ alert(e.message); }
+  }
+  async function update(id,draft){
+    try{
+      const x = await apiFetch('/api/debts/'+id, {method:'PUT', body:JSON.stringify(mapDebtToServer(draft))});
+      setDebts(debts.map(d=>d.id===id?mapDebtFromServer(x):d));
+    }catch(e){ alert(e.message); }
+  }
+  async function remove(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    try{ await apiFetch('/api/debts/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setDebts(debts.filter(x=>x.id!==id));
+  }
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل المديونات من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  const totalOutstanding = debts.reduce((s,x)=>s+((x.amount||0)-(x.repaid||0)),0);
+  const columns = [
+    {key:'date', label:'التاريخ', type:'date'},
+    {key:'lender', label:'اسم الشخص', type:'text'},
+    {key:'amount', label:'المبلغ المستلف', type:'number'},
+    {key:'repaid', label:'المسدد', type:'number'},
+    {key:'reason', label:'السبب', type:'text'},
+    {key:'_remaining', label:'المتبقي', computed:true, render: row=>num((row.amount||0)-(row.repaid||0))},
+  ];
+
+  return (
+    <div className="p-5 md:p-8 space-y-6">
+      <VerseHeader text="﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَى أَهْلِهَا﴾"/>
+      <h1 className="font-display text-3xl text-leaf-deep flex items-center gap-2"><Icon name="debt" className="w-7 h-7"/>المديونات</h1>
+      <p className="text-ink/50 text-sm -mt-4">فلوس استلفتها من حد خلال الموسم عشان تدفع بيها لجلاب أو عامل أو غيره.</p>
+      <div className="max-w-xs"><StatCard label="إجمالي المديونات المستحقة" value={money(totalOutstanding)} icon="debt" tone={totalOutstanding>0?'rust':'white'}/></div>
+
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div><label className="block text-xs text-ink/50 mb-1">التاريخ</label><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+          <div><label className="block text-xs text-ink/50 mb-1">اسم الشخص</label><input value={form.lender} onChange={e=>setForm({...form,lender:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+          <div><label className="block text-xs text-ink/50 mb-1">المبلغ</label><input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm num"/></div>
+          <div><label className="block text-xs text-ink/50 mb-1">المسدد لحد الآن</label><input type="number" value={form.repaid} onChange={e=>setForm({...form,repaid:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm num"/></div>
+          <div><label className="block text-xs text-ink/50 mb-1">السبب</label><input value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+        </div>
+        <button onClick={add} className="mt-3 bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-lg px-4 py-2 flex items-center gap-2"><Icon name="plus" className="w-4 h-4"/>إضافة</button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 overflow-x-auto ledger-lines">
+        <EditableTable columns={columns} rows={debts} onUpdate={update} onDelete={remove} emptyLabel="لسه مفيش مديونيات مسجلة"/>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- EQUIPMENT ---------------------------------------------------------- */
+function mapEquipmentItemFromServer(it){
+  return {
+    id: it.id, type: it.type, startQty: it.start_qty,
+    factoryMovements: (it.factoryMovements||[]).map(m=>({id:m.id, factoryId:m.factory_id, date:m.move_date, direction:m.direction, qty:m.qty, note:m.note||''})),
+    sakinaStock: (it.sakinaStock||[]).map(s=>({id:s.id, sakinaId:s.sakina_id, qty:s.qty})),
+    other: (it.other||[]).map(o=>({id:o.id, location:o.location, qty:o.qty})),
+  };
+}
+
+function EquipmentPage({db,setDb}){
+  const [items,setItems] = useState([]);
+  const [factories,setFactories] = useState([]);
+  const [sakinas,setSakinas] = useState([]);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+  const [selected,setSelected]=useState(null);
+  const [newType,setNewType]=useState(''); const [newStart,setNewStart]=useState('');
+  const [selectedFactory,setSelectedFactory]=useState(null);
+  const [moveForm,setMoveForm]=useState({date:todayStr(), direction:'out', qty:'', note:''});
+  const [otherForm,setOtherForm]=useState({location:'', qty:''});
+  const [editingStart,setEditingStart]=useState(false);
+  const [startDraft,setStartDraft]=useState('');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const [eq, fac, sak] = await Promise.all([apiFetch('/api/equipment'), apiFetch('/api/factories'), apiFetch('/api/sakinas')]);
+      const mapped = eq.map(mapEquipmentItemFromServer);
+      setItems(mapped);
+      setFactories(fac.map(f=>({id:f.id, name:f.name})));
+      setSakinas(sak.map(s=>({id:s.id, name:s.name})));
+      if(mapped.length) setSelected(prev=> prev || mapped[0].id);
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  const item = items.find(x=>x.id===selected) || null;
+  function patchItemLocal(id, patch){ setItems(items.map(x=>x.id===id?{...x,...patch}:x)); }
+
+  async function addType(){
+    if(!newType.trim()) return;
+    try{
+      const it = await apiFetch('/api/equipment', {method:'POST', body:JSON.stringify({type:newType.trim(), start_qty: parseFloat(newStart)||0})});
+      const mapped = mapEquipmentItemFromServer(it);
+      setItems([...items, mapped]); setNewType(''); setNewStart(''); setSelected(mapped.id);
+    }catch(e){ alert(e.message); }
+  }
+  async function removeType(id){
+    if(!confirm('تأكيد حذف الصنف؟')) return;
+    try{ await apiFetch('/api/equipment/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setItems(items.filter(x=>x.id!==id));
+    if(selected===id) setSelected(null);
+  }
+  async function saveStartQty(){
+    try{
+      await apiFetch('/api/equipment/'+item.id, {method:'PUT', body:JSON.stringify({start_qty: parseFloat(startDraft)||0})});
+      patchItemLocal(item.id, {startQty: parseFloat(startDraft)||0});
+      setEditingStart(false);
+    }catch(e){ alert(e.message); }
+  }
+
+  async function addMovement(){
+    if(!selectedFactory || moveForm.qty==='') return;
+    try{
+      const m = await apiFetch(`/api/equipment/${item.id}/factory-movements`, {method:'POST', body:JSON.stringify({
+        factory_id: selectedFactory, move_date: moveForm.date, direction: moveForm.direction, qty: parseFloat(moveForm.qty)||0, note: moveForm.note||''
+      })});
+      patchItemLocal(item.id, {factoryMovements:[...item.factoryMovements, {id:m.id, factoryId:m.factory_id, date:m.move_date, direction:m.direction, qty:m.qty, note:m.note||''}]});
+      setMoveForm({date:todayStr(), direction:'out', qty:'', note:''});
+    }catch(e){ alert(e.message); }
+  }
+  async function updateMovement(id, draft){
+    try{
+      const m = await apiFetch('/api/equipment-factory-movements/'+id, {method:'PUT', body:JSON.stringify({
+        factory_id: draft.factoryId, move_date: draft.date, direction: draft.direction, qty: parseFloat(draft.qty)||0, note: draft.note||''
+      })});
+      patchItemLocal(item.id, {factoryMovements: item.factoryMovements.map(x=>x.id===id?{id:m.id, factoryId:m.factory_id, date:m.move_date, direction:m.direction, qty:m.qty, note:m.note||''}:x)});
+    }catch(e){ alert(e.message); }
+  }
+  async function removeMovement(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    try{ await apiFetch('/api/equipment-factory-movements/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    patchItemLocal(item.id, {factoryMovements: item.factoryMovements.filter(x=>x.id!==id)});
+  }
+
+  function factoryBalance(factoryId){
+    return (item?item.factoryMovements:[]).filter(m=>m.factoryId===factoryId).reduce((s,m)=> s + (m.direction==='out'? m.qty : -m.qty), 0);
+  }
+  const factoriesTotal = item ? factories.reduce((s,f)=>s+factoryBalance(f.id),0) : 0;
+
+  async function setSakinaQty(sakinaId, qty){
+    const q = parseFloat(qty)||0;
+    try{
+      await apiFetch(`/api/equipment/${item.id}/sakina-stock/${sakinaId}`, {method:'PUT', body:JSON.stringify({qty:q})});
+      const exists = item.sakinaStock.find(s=>s.sakinaId===sakinaId);
+      const next = exists ? item.sakinaStock.map(s=>s.sakinaId===sakinaId?{...s,qty:q}:s) : [...item.sakinaStock, {id:uid(), sakinaId, qty:q}];
+      patchItemLocal(item.id, {sakinaStock: next});
+    }catch(e){ alert(e.message); }
+  }
+  function sakinaQtyOf(sakinaId){ const s=(item?item.sakinaStock:[]).find(x=>x.sakinaId===sakinaId); return s?s.qty:0; }
+  const sakinaTotal = item ? sakinas.reduce((s,sk)=>s+sakinaQtyOf(sk.id),0) : 0;
+
+  async function addOther(){
+    if(!otherForm.location || otherForm.qty==='') return;
+    try{
+      const o = await apiFetch(`/api/equipment/${item.id}/other`, {method:'POST', body:JSON.stringify({location:otherForm.location, qty: parseFloat(otherForm.qty)||0})});
+      patchItemLocal(item.id, {other:[...item.other, {id:o.id, location:o.location, qty:o.qty}]});
+      setOtherForm({location:'', qty:''});
+    }catch(e){ alert(e.message); }
+  }
+  async function updateOther(id, draft){
+    try{
+      const o = await apiFetch('/api/equipment-other/'+id, {method:'PUT', body:JSON.stringify({location:draft.location, qty: parseFloat(draft.qty)||0})});
+      patchItemLocal(item.id, {other: item.other.map(x=>x.id===id?{id:o.id,location:o.location,qty:o.qty}:x)});
+    }catch(e){ alert(e.message); }
+  }
+  async function removeOther(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    try{ await apiFetch('/api/equipment-other/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    patchItemLocal(item.id, {other: item.other.filter(x=>x.id!==id)});
+  }
+  const otherTotal = item ? item.other.reduce((s,d)=>s+(d.qty||0),0) : 0;
+
+  const accounted = factoriesTotal + sakinaTotal + otherTotal;
+  const remaining = item ? item.startQty - accounted : 0;
+  const factoryObj = factories.find(f=>f.id===selectedFactory) || null;
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل العدة من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  return (
+    <div className="p-5 md:p-8">
+      <VerseHeader text="﴿وَأَقِيمُوا الْوَزْنَ بِالْقِسْطِ وَلَا تُخْسِرُوا الْمِيزَانَ﴾"/>
+      <h1 className="font-display text-3xl text-leaf-deep mb-1 flex items-center gap-2"><Icon name="box" className="w-7 h-7"/>العدة</h1>
+      <p className="text-ink/50 text-sm mb-6">تتبع البراميل والسكاكين والمعدات: اللي وديته للمصانع، اللي رجع، واللي موجود عند النوالات.</p>
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="lg:w-72 shrink-0 bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4 h-fit space-y-3">
+          <div className="grid grid-cols-1 gap-2">
+            <input value={newType} onChange={e=>setNewType(e.target.value)} placeholder="اسم الصنف (برميل، سكين...)" className="rounded-lg border border-leaf-line px-3 py-2 text-sm"/>
+            <input type="number" value={newStart} onChange={e=>setNewStart(e.target.value)} placeholder="العدد في بداية الموسم" className="rounded-lg border border-leaf-line px-3 py-2 text-sm num"/>
+            <button onClick={addType} className="bg-leaf-deep text-cream rounded-lg py-2 text-sm flex items-center justify-center gap-1"><Icon name="plus" className="w-4 h-4"/>إضافة صنف</button>
+          </div>
+          <div className="space-y-1">
+            {items.map(x=>(
+              <button key={x.id} onClick={()=>{setSelected(x.id); setSelectedFactory(null); setEditingStart(false);}} className={`w-full text-right px-3 py-2.5 rounded-xl flex items-center justify-between ${selected===x.id?'bg-leaf-pale':'hover:bg-cream'}`}>
+                <span className="font-bold text-sm">{x.type}</span>
+                <span className="text-xs text-ink/50 num">{x.startQty}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {!item && <div className="bg-white border border-dashed border-leaf-line rounded-2xl p-10 text-center text-ink/50">اختر صنف من القائمة أو ضيف صنف جديد</div>}
+          {item && (
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-ink">{item.type}</h2>
+                <button onClick={()=>removeType(item.id)} className="text-rust text-xs flex items-center gap-1 hover:underline"><Icon name="trash" className="w-4 h-4"/>حذف الصنف</button>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white rounded-xl border border-leaf-line/30 p-4 text-center relative">
+                  <div className="text-xs text-ink/50 mb-1">بداية الموسم</div>
+                  {editingStart ? (
+                    <div className="flex items-center justify-center gap-1">
+                      <input type="number" value={startDraft} onChange={e=>setStartDraft(e.target.value)} className="w-20 text-center rounded-lg border border-leaf-line px-1 py-1 text-sm num"/>
+                      <button onClick={saveStartQty} className="text-leaf-mid"><Icon name="check" className="w-4 h-4"/></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-1">
+                      <div className="font-bold num">{Math.round(item.startQty)}</div>
+                      <button onClick={()=>{setStartDraft(item.startQty); setEditingStart(true);}} className="text-ink/30 hover:text-leaf-deep"><Icon name="edit" className="w-3.5 h-3.5"/></button>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white rounded-xl border border-leaf-line/30 p-4 text-center"><div className="text-xs text-ink/50 mb-1">عند المصانع</div><div className="font-bold num">{Math.round(factoriesTotal)}</div></div>
+                <div className="bg-white rounded-xl border border-leaf-line/30 p-4 text-center"><div className="text-xs text-ink/50 mb-1">عند النوالات</div><div className="font-bold num">{Math.round(sakinaTotal)}</div></div>
+                <div className={`rounded-xl p-4 text-center ${remaining<0?'bg-rust text-white':'bg-leaf-deep text-cream'}`}><div className="text-xs opacity-80 mb-1">المتبقي في المخزن</div><div className="font-bold num">{Math.round(remaining)}</div></div>
+              </div>
+
+              {/* factories movement */}
+              <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+                <h3 className="font-bold text-sm text-leaf-deep mb-3">الحركة مع المصانع / التجار</h3>
+                {factories.length===0 ? (
+                  <p className="text-sm text-ink/40 text-center py-4">لسه مفيش مصانع/تجار مسجلين في المبيعات. سجّل واحد هناك وهيظهر هنا تلقائيًا.</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {factories.map(f=>{
+                        const bal = factoryBalance(f.id);
+                        return (
+                          <button key={f.id} onClick={()=>setSelectedFactory(f.id)} className={`px-3 py-2 rounded-xl text-sm font-bold flex flex-col items-center gap-0.5 ${selectedFactory===f.id?'bg-leaf-deep text-cream':'bg-cream border border-leaf-line text-ink/70'}`}>
+                            {f.name}
+                            <span className="text-[10px] num opacity-80">لينا عندهم: {Math.round(bal)}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {factoryObj && (
+                      <div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                          <div><label className="block text-xs text-ink/50 mb-1">التاريخ</label><input type="date" value={moveForm.date} onChange={e=>setMoveForm({...moveForm,date:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+                          <div><label className="block text-xs text-ink/50 mb-1">الاتجاه</label>
+                            <select value={moveForm.direction} onChange={e=>setMoveForm({...moveForm,direction:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm">
+                              <option value="out">وديت لهم</option>
+                              <option value="in">رجع منهم</option>
+                            </select>
+                          </div>
+                          <div><label className="block text-xs text-ink/50 mb-1">العدد</label><input type="number" value={moveForm.qty} onChange={e=>setMoveForm({...moveForm,qty:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm num"/></div>
+                          <div><label className="block text-xs text-ink/50 mb-1">ملاحظة</label><input value={moveForm.note} onChange={e=>setMoveForm({...moveForm,note:e.target.value})} className="w-full rounded-lg border border-leaf-line px-2 py-2 text-sm"/></div>
+                        </div>
+                        <button onClick={addMovement} className="bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-lg px-4 py-2 flex items-center gap-2 mb-3"><Icon name="plus" className="w-4 h-4"/>تسجيل حركة</button>
+                        <div className="overflow-x-auto ledger-lines rounded-lg border border-leaf-line/20">
+                          <EditableTable
+                            columns={[
+                              {key:'date',label:'التاريخ',type:'date'},
+                              {key:'direction',label:'الاتجاه',type:'select', options:[{value:'out',label:'وديت لهم'},{value:'in',label:'رجع منهم'}], render:row=>row.direction==='out'?'وديت لهم':'رجع منهم'},
+                              {key:'qty',label:'العدد',type:'number'},
+                              {key:'note',label:'ملاحظة',type:'text'},
+                              {key:'factoryId', label:'', computed:true, render:()=>''},
+                            ]}
+                            rows={item.factoryMovements.filter(m=>m.factoryId===selectedFactory).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''))}
+                            onUpdate={updateMovement} onDelete={removeMovement} emptyLabel="لسه مفيش حركة مسجلة مع المصنع ده"/>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* sakina stock */}
+              <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+                <h3 className="font-bold text-sm text-leaf-deep mb-3">العدة المتاحة عند النوالات</h3>
+                {sakinas.length===0 ? (
+                  <p className="text-sm text-ink/40 text-center py-4">لسه مفيش نوالات مسجلة.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {sakinas.map(sk=>(
+                      <div key={sk.id} className="flex items-center justify-between gap-3 border-b border-leaf-line/10 pb-2">
+                        <span className="text-sm font-bold">{sk.name}</span>
+                        <input key={item.id+'-'+sk.id} type="number" defaultValue={sakinaQtyOf(sk.id)} onBlur={e=>setSakinaQty(sk.id, e.target.value)} className="w-28 rounded-lg border border-leaf-line px-2 py-1.5 text-sm num"/>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* other */}
+              <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
+                <h3 className="font-bold text-sm text-leaf-deep mb-3">أماكن أخرى (مفقود، شخص معين...)</h3>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <input value={otherForm.location} onChange={e=>setOtherForm({...otherForm,location:e.target.value})} placeholder="المكان أو السبب" className="rounded-lg border border-leaf-line px-3 py-2 text-sm"/>
+                  <input type="number" value={otherForm.qty} onChange={e=>setOtherForm({...otherForm,qty:e.target.value})} placeholder="العدد" className="rounded-lg border border-leaf-line px-3 py-2 text-sm num"/>
+                </div>
+                <button onClick={addOther} className="bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-lg px-4 py-2 flex items-center gap-2 mb-3"><Icon name="plus" className="w-4 h-4"/>إضافة</button>
+                <div className="overflow-x-auto ledger-lines rounded-lg border border-leaf-line/20">
+                  <EditableTable columns={[{key:'location',label:'المكان',type:'text'},{key:'qty',label:'العدد',type:'number'}]} rows={item.other} onUpdate={updateOther} onDelete={removeOther} emptyLabel="لا يوجد"/>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- PRICING ---------------------------------------------------------- */
+function PricingPage({db,setDb}){
+  const [mode,setMode] = useState('weekly'); // 'daily' | 'weekly' | 'seasonal'
+  const todayS = todayStr();
+  const initWs = getWeekStart(todayS);
+  const [dayDate,setDayDate] = useState(todayS);
+  const [weekStart,setWeekStart] = useState(initWs);
+  const [priceDays,setPriceDays] = useState(db.priceDays||[]);
+  const [priceWeeks,setPriceWeeks] = useState(db.priceWeeks||[]);
+  const [seasonPrices,setSeasonPrices] = useState(db.seasonPrices||null);
+  const [draft,setDraft] = useState({...DEFAULT_PRICES});
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState('');
+  const [routes,setRoutes] = useState([]);
+  const [routeForm,setRouteForm] = useState({from_location:'', to_location:'', price:''});
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const [t, rts] = await Promise.all([loadPriceTables(), apiFetch('/api/transport-routes')]);
+      const days = t.priceDays, weeks = t.priceWeeks, season = t.seasonPrices;
+      setPriceDays(days); setPriceWeeks(weeks); setSeasonPrices(season); setRoutes(rts);
+      setDb(prev=>({...prev, priceDays: days, priceWeeks: weeks, seasonPrices: season}));
+      const ex = weeks.find(w=>w.weekStart===initWs);
+      setDraft(withPriceDefaults(ex));
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+  function selectDay(rawDate){
+    setDayDate(rawDate);
+    const ex = priceDays.find(d=>d.day===rawDate);
+    setDraft(withPriceDefaults(ex));
+  }
+  function selectWeek(rawDate){
+    const ws = getWeekStart(rawDate);
+    setWeekStart(ws);
+    const ex = priceWeeks.find(w=>w.weekStart===ws);
+    setDraft(withPriceDefaults(ex));
+  }
+  function switchMode(m){
+    setMode(m);
+    if(m==='seasonal') setDraft(withPriceDefaults(seasonPrices));
+    else if(m==='daily') selectDay(todayS);
+    else selectWeek(todayS);
+  }
+  function set(path, value){
+    const copy = JSON.parse(JSON.stringify(draft));
+    let obj = copy;
+    for(let i=0;i<path.length-1;i++){ if(!obj[path[i]]) obj[path[i]] = {}; obj = obj[path[i]]; }
+    obj[path[path.length-1]] = value===''? '' : parseFloat(value);
+    setDraft(copy);
+  }
+  async function save(){
+    const pricesPayload = {...draft}; delete pricesPayload.weekStart; delete pricesPayload.day;
+    try{
+      if(mode==='seasonal'){
+        await apiFetch('/api/prices', {method:'PUT', body:JSON.stringify({scope:'season', prices: pricesPayload})});
+        setSeasonPrices(pricesPayload);
+        setDb(prev=>({...prev, seasonPrices: pricesPayload}));
+        alert('تم حفظ التسعير الموسمي');
+      } else if(mode==='daily'){
+        await apiFetch('/api/prices', {method:'PUT', body:JSON.stringify({scope:'day', week_start:dayDate, prices: pricesPayload})});
+        const others = priceDays.filter(p=>p.day!==dayDate);
+        const next = [...others, {day:dayDate, ...pricesPayload}];
+        setPriceDays(next);
+        setDb(prev=>({...prev, priceDays: next}));
+        alert('تم حفظ أسعار يوم '+formatDateWithDay(dayDate));
+      } else {
+        await apiFetch('/api/prices', {method:'PUT', body:JSON.stringify({scope:'week', week_start:weekStart, prices: pricesPayload})});
+        const others = priceWeeks.filter(p=>p.weekStart!==weekStart);
+        const nextWeeks = [...others, {weekStart, ...pricesPayload}];
+        setPriceWeeks(nextWeeks);
+        setDb(prev=>({...prev, priceWeeks: nextWeeks}));
+        alert('تم حفظ أسعار أسبوع '+getWeekRangeLabel(weekStart));
+      }
+    }catch(e){ alert(e.message); }
+  }
+
+  async function addRoute(){
+    if(!routeForm.from_location || !routeForm.to_location) return;
+    try{
+      const r = await apiFetch('/api/transport-routes', {method:'POST', body:JSON.stringify({...routeForm, price: parseFloat(routeForm.price)||0})});
+      setRoutes([...routes, r]);
+      setRouteForm({from_location:'', to_location:'', price:''});
+    }catch(e){ alert(e.message); }
+  }
+  async function updateRoute(id, draftRow){
+    try{
+      const r = await apiFetch('/api/transport-routes/'+id, {method:'PUT', body:JSON.stringify({from_location:draftRow.from_location, to_location:draftRow.to_location, price: parseFloat(draftRow.price)||0})});
+      setRoutes(routes.map(x=>x.id===id?r:x));
+    }catch(e){ alert(e.message); }
+  }
+  async function removeRoute(id){
+    if(!confirm('تأكيد الحذف؟')) return;
+    try{ await apiFetch('/api/transport-routes/'+id, {method:'DELETE'}); }catch(e){ alert(e.message); return; }
+    setRoutes(routes.filter(x=>x.id!==id));
+  }
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل التسعير من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  return (
+    <div className="p-5 md:p-10 space-y-8 max-w-4xl mx-auto">
+      <VerseHeader text="﴿وَأَوْفُوا الْكَيْلَ وَلَا تَكُونُوا مِنَ الْمُخْسِرِينَ﴾"/>
+      <h1 className="font-display text-4xl text-leaf-deep flex items-center gap-3 mb-8"><Icon name="tag" className="w-9 h-9"/>التسعير</h1>
+
+      <div className="flex gap-2">
+        <button onClick={()=>switchMode('daily')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${mode==='daily'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>تسعير يومي</button>
+        <button onClick={()=>switchMode('weekly')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${mode==='weekly'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>تسعير أسبوعي</button>
+        <button onClick={()=>switchMode('seasonal')} className={`px-4 py-2 rounded-t-xl text-sm font-bold ${mode==='seasonal'?'bg-white text-leaf-deep':'bg-creamdark text-ink/50'}`}>تسعير موسمي</button>
+      </div>
+
+      {mode==='daily' && (
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-6 flex flex-wrap items-center gap-6">
+          <div>
+            <label className="block text-xs font-bold text-ink/70 mb-2">اختر اليوم</label>
+            <input type="date" value={dayDate} onChange={e=>selectDay(e.target.value)} className="rounded-xl border border-leaf-line/60 bg-white/50 px-4 py-2 text-sm shadow-sm focus:bg-white"/>
+          </div>
+          <div className="text-sm text-leaf-deep font-black bg-leaf-pale/40 px-4 py-2 rounded-xl">اليوم الحالي في التعديل: {formatDateWithDay(dayDate)}</div>
+        </div>
+      )}
+      {mode==='weekly' && (
+        <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4 flex flex-wrap items-center gap-4">
+          <div>
+            <label className="block text-xs text-ink/50 mb-1">اختر أي يوم من الأسبوع المطلوب</label>
+            <input type="date" onChange={e=>selectWeek(e.target.value)} className="rounded-lg border border-leaf-line px-3 py-2 text-sm"/>
+          </div>
+          <div className="text-sm text-leaf-deep font-bold">الأسبوع الحالي في التعديل: {getWeekRangeLabel(weekStart)}</div>
+          <button onClick={()=>selectWeek(todayS)} className="text-xs px-3 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">أسبوع النهاردة</button>
+        </div>
+      )}
+      {mode==='seasonal' && (
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-6">
+          <p className="text-sm text-ink/70 font-medium">الأولوية: <span className="font-bold text-leaf-deep">تسعير اليوم ← تسعير الأسبوع ← آخر أسبوع متسعّر قبله ← التسعير الموسمي.</span> يعني الأسبوع اللي ملهوش تسعير بياخد سعر الأسبوع اللي قبله، والموسمي بيتطبق بس لو مفيش أي أسبوع متسعّر قبل كده. وأي تعديل في التسعير بيتطبق على كل العمليات بتاعة الفترة دي (الكشوف القديمة والربح).</p>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-5">
+        <h3 className="font-bold text-leaf-deep mb-3">الجلابة</h3>
+        <div className="max-w-xs">
+          <label className="block text-xs text-ink/50 mb-1">سعر الكوز</label>
+          <input type="number" value={draft.jalabPerKuz} onChange={e=>set(['jalabPerKuz'], e.target.value)} className="w-full rounded-lg border border-leaf-line px-3 py-2 num"/>
+        </div>
+      </div>
+
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-8">
+        <h3 className="font-bold text-lg text-leaf-deep mb-5">النوالات (السعر لكل 1000 قطعة)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Object.keys(draft.niswan).map(type=>(
+            <div key={type} className="border border-leaf-line/40 rounded-2xl p-5 bg-white/50 shadow-sm hover:shadow-md transition-all">
+              <div className="font-black text-leaf-deep mb-4 text-center border-b border-leaf-line/20 pb-2">{type}</div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-xs font-bold text-ink/60 mb-2">من غير قشر</label>
+                  <input type="number" value={draft.niswan[type].withoutPeel} onChange={e=>set(['niswan',type,'withoutPeel'], e.target.value)} className="w-full rounded-xl border border-leaf-line/60 px-4 py-2 num shadow-inner bg-white"/>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-bold text-ink/60 mb-2">مع القشر</label>
+                  <input type="number" value={draft.niswan[type].withPeel} onChange={e=>set(['niswan',type,'withPeel'], e.target.value)} className="w-full rounded-xl border border-leaf-line/60 px-4 py-2 num shadow-inner bg-white"/>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-8">
+        <h3 className="font-bold text-lg text-leaf-deep mb-5">التخريط (السعر لكل برميل)</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {Object.keys(draft.takhrit).map(type=>(
+            <div key={type}>
+              <label className="block text-xs font-bold text-ink/60 mb-2">{type}</label>
+              <input type="number" value={draft.takhrit[type]} onChange={e=>set(['takhrit',type], e.target.value)} className="w-full rounded-xl border border-leaf-line/60 px-4 py-2 num shadow-inner bg-white"/>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-8">
+        <h3 className="font-bold text-lg text-leaf-deep mb-5">المبيعات (السعر لكل كيلو / كوز)</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Object.keys(draft.sales||{}).map(type=>(
+            <div key={type} className="bg-white/50 p-3 rounded-2xl border border-leaf-line/30 hover:shadow-sm transition-shadow">
+              <label className="block text-xs text-ink/80 font-bold mb-2 text-center">{type} <span className="opacity-60 font-normal">({type==='أخضر'||type==='فرنساوي'||type==='بلدي'||type==='فرزة'?'كوز':'كيلو'})</span></label>
+              <input type="number" value={draft.sales[type]} onChange={e=>set(['sales',type], e.target.value)} className="w-full rounded-xl border border-leaf-line/60 px-4 py-2 num shadow-inner bg-white text-center font-bold"/>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-8">
+        <h3 className="font-bold text-lg text-leaf-deep mb-5">أنفار النوالة</h3>
+        <div className="max-w-xs">
+          <label className="block text-xs font-bold text-ink/60 mb-2">اليومية</label>
+          <input type="number" value={draft.workerDailyWage} onChange={e=>set(['workerDailyWage'], e.target.value)} className="w-full rounded-xl border border-leaf-line/60 px-4 py-2 num shadow-inner bg-white"/>
+        </div>
+      </div>
+
+      <button onClick={save} className="bg-gradient-to-r from-leaf-mid to-leaf-deep text-cream rounded-2xl px-8 py-4 font-black flex items-center justify-center gap-3 w-full sm:w-auto shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 text-lg">
+        <Icon name="check" className="w-5 h-5"/>{mode==='seasonal'?'حفظ التسعير الموسمي':mode==='daily'?'حفظ تعديلات هذا اليوم':'حفظ تعديلات هذا الأسبوع'}
+      </button>
+
+      {mode==='daily' && priceDays.length>0 && (
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-6 mt-8">
+          <h3 className="font-bold text-sm text-leaf-deep mb-4">أيام محفوظة سابقًا</h3>
+          <div className="flex flex-wrap gap-2">
+            {priceDays.slice().sort((a,b)=>b.day.localeCompare(a.day)).map(p=>(
+              <button key={p.day} onClick={()=>selectDay(p.day)} className={`text-xs px-4 py-2 rounded-xl border transition-all ${p.day===dayDate?'bg-leaf-deep text-cream border-leaf-deep shadow-sm':'border-leaf-line text-ink/60 hover:bg-white/50'}`}>{formatDateWithDay(p.day)}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      {mode==='weekly' && priceWeeks.length>0 && (
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-6 mt-8">
+          <h3 className="font-bold text-sm text-leaf-deep mb-4">أسابيع محفوظة سابقًا</h3>
+          <div className="flex flex-wrap gap-2">
+            {priceWeeks.slice().sort((a,b)=>b.weekStart.localeCompare(a.weekStart)).map(p=>(
+              <button key={p.weekStart} onClick={()=>selectWeek(p.weekStart)} className={`text-xs px-4 py-2 rounded-xl border transition-all ${p.weekStart===weekStart?'bg-leaf-deep text-cream border-leaf-deep shadow-sm':'border-leaf-line text-ink/60 hover:bg-white/50'}`}>{getWeekRangeLabel(p.weekStart)}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-card border border-leaf-line/30 p-8 mt-8">
+        <h3 className="font-bold text-lg text-leaf-deep mb-5">المشاوير الثابتة للعربيات</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <input value={routeForm.from_location} onChange={e=>setRouteForm({...routeForm,from_location:e.target.value})} placeholder="من" className="rounded-xl border border-leaf-line/60 bg-white/50 px-4 py-2 text-sm shadow-sm"/>
+          <input value={routeForm.to_location} onChange={e=>setRouteForm({...routeForm,to_location:e.target.value})} placeholder="إلى" className="rounded-xl border border-leaf-line/60 bg-white/50 px-4 py-2 text-sm shadow-sm"/>
+          <input type="number" value={routeForm.price} onChange={e=>setRouteForm({...routeForm,price:e.target.value})} placeholder="السعر" className="rounded-xl border border-leaf-line/60 bg-white/50 px-4 py-2 text-sm num shadow-sm"/>
+        </div>
+        <button onClick={addRoute} className="bg-gradient-to-r from-leaf-mid to-leaf-deep hover:shadow-md transition-all text-cream text-sm rounded-xl px-5 py-2.5 flex items-center justify-center gap-2 mb-5 font-bold"><Icon name="plus" className="w-4 h-4"/>إضافة مشوار ثابت</button>
+        <div className="overflow-x-auto ledger-lines rounded-2xl border border-leaf-line/30 shadow-sm">
+          <EditableTable columns={[{key:'from_location',label:'من',type:'text'},{key:'to_location',label:'إلى',type:'text'},{key:'price',label:'السعر',type:'number'}]} rows={routes} onUpdate={updateRoute} onDelete={removeRoute} emptyLabel="لسه مفيش مشاوير ثابتة"/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- DASHBOARD ---------------------------------------------------------- */
+function Dashboard({db,setDb,user,setUser}){
+  const [data,setData] = useState(null);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+  const [dashboardWeekDate,setDashboardWeekDate] = useState(todayStr());
+  const [phone,setPhone] = useState(user.owner_phone||'');
+
+  useEffect(()=>{ load(); }, []);
+  async function load(){
+    setLoading(true); setError('');
+    try{
+      const [jalaba, workers, takhritFixed, banadeer, factories, sakinas, expenses, debts, partners, raseef, transport] = await Promise.all([
+        apiFetch('/api/jalaba'), apiFetch('/api/workers'), apiFetch('/api/takhrit-fixed'), apiFetch('/api/banadeer'),
+        apiFetch('/api/factories'), apiFetch('/api/sakinas'), apiFetch('/api/expenses'), apiFetch('/api/debts'), apiFetch('/api/partner-transactions'), apiFetch('/api/raseef'),
+        apiFetch('/api/transport'),
+      ]);
+      const sakinaWorkersArrays = await Promise.all(sakinas.map(s=>apiFetch(`/api/sakinas/${s.id}/workers`)));
+      // تسعيرة كل جلاب/مصنع/بائع الأسبوعية بنفس الشكل اللي بتستخدمه صفحاتهم — عشان الأرقام تطابق كشوف الحساب
+      const withWeekly = list => (list||[]).map(p=>({...p, weeklyPrices: normalizeWeeklyPrices(p.weeklyPrices || p.weekly_prices)}));
+      setData({ jalaba: withWeekly(jalaba), workers, takhritFixed, banadeer, factories: withWeekly(factories), sakinas, sakinaWorkers: sakinaWorkersArrays.flat(), expenses, debts, partners, raseef: withWeekly(raseef), transport: transport||[] });
+    }catch(e){ setError(e.message); }
+    setLoading(false);
+  }
+
+
+  if(loading) return <div className="p-8 text-center text-ink/50">بيحمّل ملخص النوالة من السيرفر...</div>;
+  if(error) return (
+    <div className="p-8 text-center">
+      <p className="text-rust mb-3">حصل خطأ: {error}</p>
+      <button onClick={load} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+    </div>
+  );
+
+  const paidAll = people => people.reduce((s,p)=>s+(p.payments||[]).reduce((s2,x)=>s2+(x.amount||0),0),0);
+  const earnedAll = (people, calcFn) => people.reduce((s,p)=>s+(p.entries||[]).reduce((s2,e)=>s2+calcFn(e, getPriceSetForDate(db,e.entry_date), p),0),0);
+
+  const jalabaCalc = (e,ps,p)=> calcJalabEntry({ date: e.entry_date, kuz: e.kuz, price: e.price, itemType: e.item_type }, ps, p);
+  const takhritCalc = (e,ps,p)=> (parseFloat(e.barrels)||0) * ((e.price!==null&&e.price!==undefined&&e.price!=='') ? parseFloat(e.price) : ((ps.takhrit||{})[e.barrel_type]||0));
+  const workerCalc = (e,ps,p)=> e.present ? (ps.workerDailyWage||0) : 0;
+  const sakinaCalc = (e,ps,p)=> (parseFloat(e.pieces)||0)/1000 * (((ps.niswan||{})[e.item_type]||{})[e.took_peel?'withPeel':'withoutPeel']||0);
+  const transportCalc = (e,ps,p)=> parseFloat(e.price)||0;
+  const salesCalc = (e,ps,p)=> getEntryPricingDetails({ date: e.entry_date, kind: e.kind, itemType: e.item_type, grade: e.grade, tons: e.tons, pricePerTon: e.price_per_ton, discount: e.discount }, ps, p).netTotal;
+
+  const raseefCalc = (e,ps,p)=> getEntryPricingDetails({ date: e.entry_date, kind: e.kind, itemType: e.item_type, grade: e.grade, quantity: e.quantity, price: e.price, discount: e.discount }, ps, p, 'purchase').netTotal;
+  const targetWs = getWeekStart(dashboardWeekDate);
+  const paidWeekOf = (people, ws) => people.reduce((s,p)=>s+(p.payments||[]).filter(x=>getWeekStart(x.pay_date)===ws).reduce((s2,x)=>s2+(x.amount||0),0),0);
+  const earnedWeekOf = (people, calcFn, ws) => people.reduce((s,p)=>s+(p.entries||[]).filter(e=>getWeekStart(e.entry_date)===ws).reduce((s2,e)=>s2+calcFn(e, getPriceSetForDate(db,e.entry_date), p),0),0);
+
+  // المشتريات: كله على الأسبوع المختار (زي باقي الكروت) مش الأسبوع الحالي
+  const raseefAll = paidAll(data.raseef || []), raseefWeek = paidWeekOf(data.raseef || [], targetWs);
+  const raseefEarnedAll = earnedAll(data.raseef || [], raseefCalc);
+  const raseefEarnedWeek = earnedWeekOf(data.raseef || [], raseefCalc, targetWs);
+  const raseefRemaining = raseefEarnedAll - raseefAll;
+
+  const salesAll = paidAll(data.factories), salesWeek = paidWeekOf(data.factories, targetWs);
+  const salesEarnedAll = earnedAll(data.factories, salesCalc);
+  const salesEarnedWeek = earnedWeekOf(data.factories, salesCalc, targetWs);
+  const salesRemaining = salesEarnedAll - salesAll;
+  const jalabaAll = paidAll(data.jalaba), jalabaWeek = paidWeekOf(data.jalaba, targetWs);
+  const jalabaEarnedAll = earnedAll(data.jalaba, jalabaCalc), jalabaEarnedWeek = earnedWeekOf(data.jalaba, jalabaCalc, targetWs);
+  const laborAll = paidAll(data.takhritFixed)+paidAll(data.banadeer)+paidAll(data.workers)+paidAll(data.sakinaWorkers);
+  const laborWeek = paidWeekOf(data.takhritFixed, targetWs)+paidWeekOf(data.banadeer, targetWs)+paidWeekOf(data.workers, targetWs)+paidWeekOf(data.sakinaWorkers, targetWs);
+  const laborEarnedAll = earnedAll(data.takhritFixed,takhritCalc)+earnedAll(data.banadeer,takhritCalc)+earnedAll(data.workers,workerCalc)+earnedAll(data.sakinaWorkers,sakinaCalc);
+  const laborEarnedWeek = earnedWeekOf(data.takhritFixed,takhritCalc,targetWs)+earnedWeekOf(data.banadeer,takhritCalc,targetWs)+earnedWeekOf(data.workers,workerCalc,targetWs)+earnedWeekOf(data.sakinaWorkers,sakinaCalc,targetWs);
+  // العربيات: المشاوير المستحقة والمدفوع لأصحابها
+  const transportAll = paidAll(data.transport), transportEarnedAll = earnedAll(data.transport, transportCalc);
+  const transportEarnedWeek = earnedWeekOf(data.transport, transportCalc, targetWs);
+  const expAll = data.expenses.reduce((s,x)=>s+(x.amount||0),0);
+  const expWeek = data.expenses.filter(x=>getWeekStart(x.expense_date)===targetWs).reduce((s,x)=>s+(x.amount||0),0);
+  const partnersNet = data.partners.reduce((s,x)=>s+(x.type==='إيداع'?x.amount:-x.amount),0);
+  const debtsOutstanding = data.debts.reduce((s,x)=>s+((x.amount||0)-(x.repaid||0)),0);
+
+  const capital = user.capital||0;
+  const cashBox = capital + salesAll + partnersNet + debtsOutstanding - jalabaAll - laborAll - expAll - raseefAll - transportAll;
+  const seasonProfit = salesEarnedAll - expAll - jalabaEarnedAll - laborEarnedAll - raseefEarnedAll - transportEarnedAll;
+  const weekProfit = salesEarnedWeek - expWeek - jalabaEarnedWeek - laborEarnedWeek - raseefEarnedWeek - transportEarnedWeek;
+
+  const rows = [
+    {label:'إجمالي المبيعات (مستحق)', value:salesEarnedWeek, sign:'+'},
+    {label:'مستحقات الجلابة', value:jalabaEarnedWeek, sign:'-'},
+    {label:'حساب العمال (تخريط، نوالات، عمال)', value:laborEarnedWeek, sign:'-'},
+    {label:'مشتريات الرصيف', value:raseefEarnedWeek, sign:'-'},
+    {label:'مصاريف النوالة', value:expWeek, sign:'-'},
+    {label:'مشاوير العربيات', value:transportEarnedWeek, sign:'-'},
+  ];
+  const maxVal = Math.max(1, ...rows.map(r=>r.value));
+
+  async function saveNawala(patch){
+    try{
+      const updated = await apiFetch('/api/nawala', {method:'PUT', body:JSON.stringify({
+        capital: patch.capital!==undefined ? patch.capital : user.capital,
+        owner_phone: patch.owner_phone!==undefined ? patch.owner_phone : user.owner_phone,
+      })});
+      setUser({...user, ...updated});
+    }catch(e){ alert(e.message); }
+  }
+  async function savePhone(){ await saveNawala({owner_phone: phone}); alert('تم حفظ الرقم'); }
+  function sendWeekly(){
+    const text = [
+      'ملخص أسبوع النوالة',
+      'الأسبوع: '+getWeekRangeLabel(targetWs), '',
+      'إجمالي المبيعات (مستحق): '+money(salesEarnedWeek),
+      'الواصل فعليًا من المبيعات: '+money(salesWeek),
+      'مستحقات الجلابة: '+money(jalabaEarnedWeek),
+      'حساب العمال: '+money(laborEarnedWeek),
+      'مشتريات الرصيف: '+money(raseefEarnedWeek),
+      'مصاريف النوالة: '+money(expWeek),
+      'مشاوير العربيات: '+money(transportEarnedWeek),
+      'صافي ربح الأسبوع: '+money(weekProfit), '',
+      'السيولة الحالية: '+money(cashBox),
+      'إجمالي المديونات: '+money(debtsOutstanding),
+    ].join('\n');
+    waShare(text, phone || user.owner_phone);
+  }
+
+  const empty = data.jalaba.length===0 && data.factories.length===0 && data.sakinas.length===0;
+
+  return (
+    <div className="p-5 md:p-8 space-y-6">
+      <VerseHeader text="﴿وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا * وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ﴾"/>
+      <h1 className="font-display text-3xl text-leaf-deep">أهلاً بيك في نوالتك</h1>
+
+      {empty && (
+        <div className="bg-white border border-dashed border-leaf-line rounded-2xl p-8 text-center text-ink/60">
+          <ArtichokeMark className="w-14 h-14 mx-auto mb-3 opacity-70"/>
+          <p className="mb-1">لسه معندكش بيانات مسجّلة في النوالة.</p>
+          <p className="text-sm">ابدأ بتسجيل رأس المال، وبعدين جلاب أو نوالة من القائمة على اليمين.</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CapitalCard capital={capital} onSave={v=>saveNawala({capital:v})}/>
+        <StatCard label="السيولة الحالية (كاش دلوقتي)" value={money(cashBox)} icon="coin" tone="leaf" sub="رأس المال + الواصل من المبيعات + صافي الشركاء + المديونات − المصاريف − المدفوع لكل الأطراف (جلابة، رصيف، عمال، عربيات)"/>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="صافي الربح الأسبوعي" value={money(weekProfit)} icon={weekProfit>=0?'check':'arrow'} tone={weekProfit>=0?'gold':'rust'}/>
+        <StatCard label="ربح الموسم (حتى الآن)" value={money(seasonProfit)} icon="coin" tone="white"/>
+        <StatCard label="إجمالي المديونات" value={money(debtsOutstanding)} icon="debt" tone={debtsOutstanding>0?'rust':'white'}/>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="الواصل من المبيعات (الأسبوع)" value={money(salesWeek)} icon="receipt" tone="white" sub={`مستحق الأسبوع: ${num(salesEarnedWeek)}`}/>
+        <StatCard label="المستحق من المبيعات (الموسم)" value={money(salesEarnedAll)} icon="receipt" tone="white"/>
+        <StatCard label="الباقي عند المصانع" value={money(salesRemaining)} icon="receipt" tone={salesRemaining>0?'rust':'white'}/>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 mb-4">
+        <StatCard label="المدفوع للمشتريات (الأسبوع)" value={money(raseefWeek)} icon="truck" tone="white" sub={`مستحق الأسبوع: ${num(raseefEarnedWeek)}`}/>
+        <StatCard label="المستحق للمشتريات (الموسم)" value={money(raseefEarnedAll)} icon="truck" tone="white"/>
+        <StatCard label="باقي مستحقات المشتريات" value={money(raseefRemaining)} icon="truck" tone={raseefRemaining>0?'rust':'white'}/>
+      </div>
+
+      <div className="bg-white/60 backdrop-blur-2xl rounded-[2.5rem] shadow-card border border-white/80 p-8">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-6">
+          <h3 className="font-bold font-display text-2xl text-leaf-deep text-base drop-shadow-sm">ملخص أسبوع ({getWeekRangeLabel(targetWs)})</h3>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-ink/70 font-bold">اختر الأسبوع:</label>
+            <input type="date" value={dashboardWeekDate} onChange={e=>setDashboardWeekDate(e.target.value)} className="rounded-2xl border border-white/60 px-4 py-2 text-sm num bg-white/50 backdrop-blur-sm font-bold shadow-sm"/>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {rows.map((r,i)=>(
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-40 shrink-0 text-sm text-ink/70 font-bold">{r.label}</div>
+              <div className="flex-1 bg-white/50 border border-white/40 rounded-full h-4 overflow-hidden shadow-inner">
+                <div className={`h-full rounded-full ${r.sign==='+'?'bg-gradient-to-r from-leaf-bright to-leaf-mid':'bg-gradient-to-r from-gold-light to-gold'}`} style={{width: (r.value/maxVal*100)+'%'}}/>
+              </div>
+              <div className={`w-28 text-left text-sm font-bold num ${r.sign==='+'?'text-leaf-mid':'text-rust'}`}>{r.sign}{num(r.value)}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 pt-6 border-t border-white/60 flex items-center justify-between">
+          <span className="font-bold text-ink text-xl">صافي ربح الأسبوع</span>
+          <span className={`font-display text-3xl md:text-4xl drop-shadow-sm ${weekProfit>=0?'text-leaf-deep':'text-rust'}`}>{money(weekProfit)}</span>
+        </div>
+        <div className="mt-6 flex items-center gap-2 flex-wrap">
+          <label className="text-sm text-ink/70 font-bold">رقم واتساب صاحب النوالة:</label>
+          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="2010xxxxxxxx" dir="ltr" className="rounded-2xl border border-white/60 px-4 py-2 text-sm num bg-white/50 w-44"/>
+          <button onClick={savePhone} className="text-xs px-4 py-2 rounded-2xl border border-leaf-line text-leaf-deep bg-white/70 font-bold">حفظ الرقم</button>
+          <button onClick={sendWeekly} className="text-xs px-4 py-2 rounded-2xl border border-[#25D366]/40 text-[#128C7E] bg-white font-bold flex items-center gap-1.5"><Icon name="whatsapp" className="w-4 h-4"/>ابعت ملخص الأسبوع واتساب</button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- APP ---------------------------------------------------------- */
+function App(){
+  const [user,setUser] = useState(null);
+  const [checkingSession,setCheckingSession] = useState(true);
+  const [page,setPage] = useState('dashboard');
+  const [db,setDb] = useState(emptyDB());
+  const [mobileOpen,setMobileOpen] = useState(false);
+
+  useEffect(()=>{
+    async function restore(){
+      const token = getToken();
+      if(!token){ setCheckingSession(false); return; }
+      try{
+        const me = await apiFetch('/api/me');
+        setUser(me);
+      }catch(e){
+        setToken(null);
+      }
+      setCheckingSession(false);
+    }
+    restore();
+  }, []);
+
+  // الأسعار لازم تتحمل قبل أي صفحة، وإلا الحسابات كانت بتطلع بالأسعار الافتراضية
+  const [pricesReady,setPricesReady] = useState(false);
+  const [pricesError,setPricesError] = useState('');
+  async function loadPrices(){
+    setPricesError('');
+    try{
+      const t = await loadPriceTables();
+      setDb(prev=>({...prev, ...t}));
+      setPricesReady(true);
+    }catch(e){ setPricesError(e.message); }
+  }
+  useEffect(()=>{ if(user) loadPrices(); else setPricesReady(false); }, [user && user.name]);
+
+  function handleLogout(){ setToken(null); setUser(null); setDb(emptyDB()); setPage('dashboard'); }
+
+  if(checkingSession) return <div className="min-h-screen flex items-center justify-center text-ink/40">بيتأكد من تسجيل الدخول...</div>;
+  if(!user) return <Login onLogin={setUser}/>;
+  if(!pricesReady) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-ink/50">
+      {pricesError ? (<>
+        <p className="text-rust">ماقدرناش نحمّل الأسعار: {pricesError}</p>
+        <button onClick={loadPrices} className="text-sm px-4 py-2 rounded-lg border border-leaf-line text-leaf-deep hover:bg-leaf-pale">حاول تاني</button>
+      </>) : 'بيحمّل التسعير...'}
+    </div>
+  );
+
+  const titleMap = Object.fromEntries(NAV.map(n=>[n.key,n.label]));
+
+  let content;
+  if(page==='dashboard') content = <Dashboard db={db} setDb={setDb} user={user} setUser={setUser}/>;
+  else if(page==='sales') content = <SalesPage db={db} setDb={setDb}/>;
+  else if(page==='jalaba') content = <JalabaPage db={db} setDb={setDb}/>;
+  else if(page==='raseef') content = <RaseefPage db={db} setDb={setDb}/>;
+  else if(page==='workers') content = <WorkersPage db={db} setDb={setDb}/>;
+  else if(page==='sakina') content = <SakinaPage db={db} setDb={setDb}/>;
+  else if(page==='takhrit') content = <TakhritPage db={db} setDb={setDb}/>;
+  else if(page==='expenses') content = <ExpensesPage db={db} setDb={setDb}/>;
+  else if(page==='debts') content = <DebtsPage db={db} setDb={setDb}/>;
+  else if(page==='equipment') content = <EquipmentPage db={db} setDb={setDb}/>;
+  else if(page==='pricing') content = <PricingPage db={db} setDb={setDb}/>;
+
+  return (
+    <div className="min-h-screen flex flex-row-reverse">
+      <Sidebar page={page} setPage={setPage} user={user.name} onLogout={handleLogout} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}/>
+      <div className="flex-1 min-w-0">
+        <Topbar title={titleMap[page]} setMobileOpen={setMobileOpen}/>
+        {content}
+      </div>
+    </div>
+  );
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props){ super(props); this.state = { hasError:false, error:null }; }
+  static getDerivedStateFromError(error){ return { hasError:true, error }; }
+  componentDidCatch(error, info){ console.error(error, info); }
+  render(){
+    if(this.state.hasError){
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-cream text-ink text-center">
+          <div className="bg-white p-8 rounded-2xl shadow-card border border-leaf-line/40 max-w-md">
+            <h2 className="text-xl font-bold text-rust mb-2">حصل خطأ أثناء تشغيل التطبيق</h2>
+            <p className="text-sm text-ink/60 mb-4">{this.state.error?.message || 'خطأ غير معروف'}</p>
+            <button onClick={()=>window.location.reload()} className="bg-leaf-deep text-cream px-4 py-2 rounded-lg font-bold">إعادة تحميل الصفحة</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App/>
+  </ErrorBoundary>
+);
+</script>
+</body>
+</html>
