@@ -29,13 +29,19 @@ const twConfig = Function('return ' + cfgMatch[1])();
 twConfig.content = [{ raw: src, extension: 'html' }];
 const twCss = (await postcss([tailwindcss(twConfig)]).process('@tailwind base;@tailwind components;@tailwind utilities;', { from: undefined })).css;
 
-// 3) الخطوط (الحروف العربية بس) جوه الملف
-const font = (pkg, family, weight) => {
-  const file = path.join(root, 'node_modules', pkg, 'files', `${pkg.split('/')[1]}-arabic-${weight}-normal.woff2`);
-  const b64 = fs.readFileSync(file).toString('base64');
-  return `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:swap;src:url(data:font/woff2;base64,${b64}) format('woff2');}`;
-};
-const fonts = [400, 500, 700, 800].map(w => font('@fontsource/tajawal', 'Tajawal', w)).join('') + font('@fontsource/lalezar', 'Lalezar', 400);
+// 3) الخطوط (الحروف العربية واللاتينية بس) جوه الملف — من ملفات fontsource بنفس unicode-range بتاعها
+const fontFaces = (pkg, weights, subsets) => weights.map(w => {
+  const dir = path.join(root, 'node_modules', pkg);
+  const css = fs.readFileSync(path.join(dir, `${w}.css`), 'utf8');
+  return (css.match(/@font-face\s*\{[^}]*\}/g) || []).filter(block => subsets.some(sub => block.includes(`-${sub}-${w}-normal`))).map(block => {
+    const file = block.match(/url\(\.\/files\/([^)]+\.woff2)\)/)[1];
+    const b64 = fs.readFileSync(path.join(dir, 'files', file)).toString('base64');
+    return block.replace(/src:[^;]+;/, `src:url(data:font/woff2;base64,${b64}) format('woff2');`);
+  }).join('');
+}).join('');
+const fonts = fontFaces('@fontsource/ibm-plex-sans-arabic', [400, 500, 600, 700], ['arabic', 'latin'])
+  + fontFaces('@fontsource/amiri', [400], ['arabic'])
+  + fontFaces('@fontsource/lalezar', [400], ['arabic']);
 
 // 4) المكتبات
 const libs = [
