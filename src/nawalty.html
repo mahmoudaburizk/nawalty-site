@@ -519,107 +519,121 @@ function daysSinceBackup(){
   return Math.floor((new Date(todayStr()+'T00:00:00') - new Date(d+'T00:00:00')) / 86400000);
 }
 
-/* ---------- بيانات تجريبية: موسم صغير (٣ أسابيع) فيه كل الأقسام ---------- */
+/* ---------- بيانات تجريبية: موسم ٦ أسابيع فيه كل الأقسام ---------- */
 function buildDemoData(){
-  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   const pick = a => a[Math.floor(rnd()*a.length)];
   const between = (a,b,step=1) => Math.round((a + rnd()*(b-a))/step)*step;
   let n = 0; const id = p => p + (++n).toString(36) + 'd';
   const today = todayStr();
   const ws0 = getWeekStart(today);
   const shift = (d, k) => { const x = new Date(d+'T00:00:00'); x.setDate(x.getDate()+k); return localDateStr(x); };
-  const weeks = [shift(ws0,-14), shift(ws0,-7), ws0];
+  const W = 6;
+  const weeks = Array.from({length:W}, (_,i)=>shift(ws0, -7*(W-1-i)));
   const days = ws => [0,1,2,3,4,5,6].map(k=>shift(ws,k)).filter(d=>d<=today);
   const allDays = weeks.flatMap(days);
+  const lastDay = ws => days(ws).slice(-1)[0] || ws;
   const pay = (date, amount, note='') => ({ id:id('p'), pay_date:date, amount, note });
+  // الأسعار بتطلع شوية مع الموسم
+  const up = (base, i, step) => Math.round((base + step*i)*100)/100;
 
   const prices = weeks.map((ws,i)=>({ scope:'week', week_start: ws, prices: {
-    jalabPerKuz: [2.5,3,3.25][i], jalabPerTon: [900,950,1000][i],
+    jalabPerKuz: up(2.25,i,0.25), jalabPerTon: up(850,i,30),
     niswan: { 'هارت':{withPeel:140, withoutPeel:190}, 'كاسات':{withPeel:150, withoutPeel:200}, 'حشو':{withPeel:130, withoutPeel:180} },
     takhrit: { 'قطع':100, 'قرص':100, 'شرايح':90, 'حدوة':110 },
-    workerDailyWage: [150,150,170][i],
-    sales: { 'قطع (أولى)':[32,35,36][i], 'قطع (ثانية)':[22,25,26][i], 'كاسات (أولى)':[48,50,52][i], 'كاسات (ثانية)':[38,40,40][i], 'قرص (أولى)':[38,40,42][i], 'قرص (ثانية)':[28,30,30][i],
-      'حشو (أولى)':[38,40,41][i], 'حشو (ثانية)':[28,30,30][i], 'شرايح (أولى)':[33,35,36][i], 'شرايح (ثانية)':[23,25,25][i], 'حدوة (أولى)':[33,35,35][i], 'حدوة (ثانية)':[23,25,25][i], 'أخضر':[2,2,2.25][i] }
+    workerDailyWage: i < 3 ? 150 : 170,
+    sales: { 'قطع (أولى)':up(30,i,1.5), 'قطع (ثانية)':up(21,i,1), 'كاسات (أولى)':up(46,i,1.5), 'كاسات (ثانية)':up(36,i,1), 'قرص (أولى)':up(36,i,1.5), 'قرص (ثانية)':up(26,i,1),
+      'حشو (أولى)':up(36,i,1.2), 'حشو (ثانية)':up(26,i,1), 'شرايح (أولى)':up(31,i,1.2), 'شرايح (ثانية)':up(21,i,1), 'حدوة (أولى)':up(31,i,1), 'حدوة (ثانية)':up(21,i,1), 'أخضر':up(1.75,i,0.1) }
   }}));
-  prices.push({ scope:'lock', week_start: weeks[0], prices:{ locked:true } });
+  weeks.slice(0, W-2).forEach(ws=>prices.push({ scope:'lock', week_start: ws, prices:{ locked:true } }));
 
-  const jalaba = [
-    { id:id('j'), name:'الحاج سيد عبد العال', weeklyPrices:[{weekStart: weeks[1], prices:{'بلدي':3.5}, discount:0}], unit:'كوز' },
-    { id:id('j'), name:'محمد أبو زيد', weeklyPrices:[], unit:'كوز' },
-    { id:id('j'), name:'عم رمضان (بالطن)', weeklyPrices:[], unit:'طن' },
-  ].map(j=>{
-    const entries = allDays.filter(()=>rnd()<0.45).map(d=>({ id:id('e'), entry_date:d, unit:j.unit, kuz: j.unit==='طن' ? between(2,6) : between(300,1200,50), item_type: pick(['بلدي','بلدي','فرنساوي','غير ذلك']), price:null }));
-    const payments = weeks.map(ws=>pay(shift(ws, Math.min(6, Math.max(0, Math.floor((new Date(today)-new Date(ws))/864e5)))), j.unit==='طن' ? between(2000,5000,500) : between(1000,3500,250), 'حساب الأسبوع'));
-    const { unit, ...rest } = j; return { ...rest, opening_balance:0, entries, payments };
+  // دفعات آخر كل أسبوع خلص + جزء من الأسبوع الحالي
+  const weeklyPays = (earnedPerWeek, ratio, note) => weeks.map((ws,i)=> i < W-1 ? pay(lastDay(ws), Math.round(earnedPerWeek*ratio/50)*50, note) : null).filter(Boolean);
+
+  const jalabaDefs = [
+    ['الحاج سيد عبد العال','كوز',0.55,[300,1200]], ['محمد أبو زيد','كوز',0.45,[200,900]], ['عم رمضان','طن',0.35,[2,6]],
+    ['حسين الشرقاوي','كوز',0.4,[400,1500]], ['جمال عبد الحميد','كوز',0.3,[150,600]], ['أولاد عم صبري','طن',0.25,[3,8]],
+  ];
+  const jalaba = jalabaDefs.map(([name, unit, freq, [lo,hi]], j)=>{
+    const entries = allDays.filter(()=>rnd()<freq).map(d=>({ id:id('e'), entry_date:d, unit, kuz: unit==='طن' ? between(lo,hi) : between(lo,hi,50), item_type: pick(['بلدي','بلدي','فرنساوي','غير ذلك']), price:null }));
+    const avg = unit==='طن' ? 950*(lo+hi)/2*freq*7 : 3*(lo+hi)/2*freq*7;
+    const weeklyPrices = j===0 ? [{weekStart: weeks[2], prices:{'بلدي':3.5,'عام':3.25}, discount:0}] : [];
+    return { id:id('j'), name, opening_balance: j===3 ? 1500 : 0, weeklyPrices, entries, payments: weeklyPays(avg, 0.85, 'حساب الأسبوع') };
   });
 
-  const factories = [
-    { id:id('f'), name:'مصنع الفيروز للمجمدات', disc:3 },
-    { id:id('f'), name:'مصنع النصر للتصدير', disc:0 },
-    { id:id('f'), name:'حسن البنا (تاجر أخضر)', disc:0, green:true },
-  ].map(f=>{
-    const entries = allDays.filter(()=>rnd()<0.4).map(d=> f.green
+  const factoryDefs = [
+    ['مصنع الفيروز للمجمدات', 3, false], ['مصنع النصر للتصدير', 0, false], ['شركة الدلتا للأغذية المجمدة', 2, false], ['حسن البنا (تاجر أخضر)', 0, true],
+  ];
+  const factories = factoryDefs.map(([name, disc, green])=>{
+    const entries = allDays.filter(()=>rnd()<(green?0.35:0.45)).map(d=> green
       ? { id:id('s'), entry_date:d, kind:'أخضر', item_type: pick(['بلدي','فرنساوي']), grade:null, quantity: between(800,2500,100), price:null, discount:null }
-      : { id:id('s'), entry_date:d, kind:'مصنع', item_type: pick(['قطع','قطع','قرص','شرايح','كاسات','حدوة']), grade: rnd()<0.75?'درجة أولى':'درجة ثانية', quantity: between(150,700,10), price:null, discount:null });
-    const weeklyPrices = f.disc ? [{ weekStart: weeks[0], prices:{}, discount: f.disc }] : [];
-    const payments = weeks.slice(0,2).map(ws=>pay(shift(ws,6), f.green ? between(2000,4000,500) : between(8000,20000,1000), 'تحويل'));
-    return { id:f.id, name:f.name, opening_balance:0, weeklyPrices, entries, payments };
+      : { id:id('s'), entry_date:d, kind:'مصنع', item_type: pick(['قطع','قطع','قرص','شرايح','كاسات','حدوة','حشو']), grade: rnd()<0.75?'درجة أولى':'درجة ثانية', quantity: between(80,320,10), price:null, discount:null });
+    const weeklyPrices = disc ? [{ weekStart: weeks[0], prices:{}, discount: disc }] : [];
+    return { id:id('f'), name, opening_balance:0, weeklyPrices, entries, payments: weeklyPays(green ? 9000 : 25000, 0.8, 'تحويل') };
   });
 
-  const raseef = [{ id:id('r'), name:'رصيف سوق العبور', opening_balance:0,
-    weeklyPrices:[{ weekStart: weeks[0], prices:{ 'فرنساوي':2, 'بلدي':1.75, 'قطع (أولى)':28 }, discount:0 }],
-    entries: allDays.filter(()=>rnd()<0.3).map(d=> rnd()<0.6
-      ? { id:id('e'), entry_date:d, kind:'أخضر', item_type: pick(['فرنساوي','بلدي']), grade:null, quantity: between(300,900,50), price:null, discount:null, note:'' }
-      : { id:id('e'), entry_date:d, kind:'مصنع', item_type:'قطع', grade:'درجة أولى', quantity: between(100,300,10), price:null, discount:null, note:'جاهز' }),
-    payments:[pay(shift(weeks[1],5), 3000)] }];
+  const raseef = [
+    { id:id('r'), name:'رصيف سوق العبور', opening_balance:0, weeklyPrices:[{ weekStart: weeks[0], prices:{ 'فرنساوي':2, 'بلدي':1.75, 'قطع (أولى)':27 }, discount:0 }] },
+    { id:id('r'), name:'المعلم عرفة (رصيف)', opening_balance:0, weeklyPrices:[{ weekStart: weeks[0], prices:{ 'بلدي':1.6, 'فرنساوي':1.9, 'قطع (أولى)':26 }, discount:0 }] },
+  ].map(r=>({ ...r,
+    entries: allDays.filter(()=>rnd()<0.3).map(d=> rnd()<0.65
+      ? { id:id('e'), entry_date:d, kind:'أخضر', item_type: pick(['فرنساوي','بلدي']), grade:null, quantity: between(300,1200,50), price:null, discount:null, note:'' }
+      : { id:id('e'), entry_date:d, kind:'مصنع', item_type:'قطع', grade:'درجة أولى', quantity: between(100,300,10), price: rnd()<0.3 ? 26 : null, discount:null, note:'جاهز' }),
+    payments: weeklyPays(3500, 0.8, '') }));
 
-  const sakinas = [{ id:id('k'), name:'نوالة البلد' }, { id:id('k'), name:'نوالة الشارع الجديد' }];
-  const sakinaWorkers = {
-    [sakinas[0].id]: ['أم أحمد','فاطمة السيد','هناء محمود'],
-    [sakinas[1].id]: ['سعاد','منى عبد الله'],
-  };
+  const sakinas = [{ id:id('k'), name:'نوالة البلد' }, { id:id('k'), name:'نوالة الشارع الجديد' }, { id:id('k'), name:'نوالة الترعة' }];
+  const sakinaWorkers = [['أم أحمد','فاطمة السيد','هناء محمود','نجلاء'], ['سعاد','منى عبد الله','أم كريم'], ['زينب','وفاء','سماح']];
   const sakinaKeys = {};
-  Object.entries(sakinaWorkers).forEach(([sid, names])=>{
-    sakinaKeys['sakina_workers_'+sid] = names.map(name=>({ id:id('w'), name, opening_balance:0,
-      entries: allDays.filter(()=>rnd()<0.6).map(d=>({ id:id('e'), entry_date:d, item_type: pick(['هارت','هارت','كاسات','حشو']), pieces: between(2000,7000,100), took_peel: rnd()<0.3 })),
-      payments: weeks.slice(0,2).map(ws=>pay(shift(ws,6), between(1500,3500,100))) }));
+  sakinas.forEach((sk, i)=>{
+    sakinaKeys['sakina_workers_'+sk.id] = sakinaWorkers[i].map(name=>({ id:id('w'), name, opening_balance:0,
+      entries: allDays.filter(()=>rnd()<0.6).map(d=>({ id:id('e'), entry_date:d, item_type: pick(['هارت','هارت','كاسات','حشو']), pieces: between(2000,8000,100), took_peel: rnd()<0.3 })),
+      payments: weeklyPays(3000, 0.9, '') }));
   });
 
   const takhritPerson = name => ({ id:id('t'), name, opening_balance:0,
-    entries: allDays.filter(()=>rnd()<0.5).map(d=>({ id:id('e'), entry_date:d, barrel_type: pick(['قطع','قطع','قرص','شرايح','حدوة']), barrels: between(2,8), price:null })),
-    payments: weeks.slice(0,2).map(ws=>pay(shift(ws,6), between(1500,3000,100))) });
-  const takhritFixed = [takhritPerson('عبده التخريط'), takhritPerson('كريم سعد')];
-  const banadeer = [takhritPerson('بندير أبو علي')];
+    entries: allDays.filter(()=>rnd()<0.5).map(d=>({ id:id('e'), entry_date:d, barrel_type: pick(['قطع','قطع','قرص','شرايح','حدوة']), barrels: between(2,9), price: rnd()<0.1 ? 120 : null })),
+    payments: weeklyPays(1800, 0.9, '') });
+  const takhritFixed = ['عبده التخريط','كريم سعد','وليد الصاوي'].map(takhritPerson);
+  const banadeer = ['بندير أبو علي','بندير الحاج عزت'].map(takhritPerson);
 
-  const workers = ['سعيد','مصطفى','إبراهيم','عادل'].map(name=>({ id:id('n'), name, opening_balance:0,
+  const workers = ['سعيد','مصطفى','إبراهيم','عادل','محمود الصغير','شريف'].map(name=>({ id:id('n'), name, opening_balance:0,
     entries: allDays.map(d=>({ id:id('e'), entry_date:d, present: rnd()<0.85, performance: pick(['كويس','كويس','ممتاز','ضعيف']), note:'' })),
-    payments: weeks.slice(0,2).map(ws=>pay(shift(ws,6), between(700,1050,50), 'يوميات الأسبوع')) }));
+    payments: weeklyPays(1050, 0.95, 'يوميات الأسبوع') }));
 
   const routes = [
     { id:id('rt'), from_location:'النوالة', to_location: factories[0].name, price:350 },
     { id:id('rt'), from_location:'النوالة', to_location: factories[1].name, price:400 },
+    { id:id('rt'), from_location:'النوالة', to_location: factories[2].name, price:450 },
+    { id:id('rt'), from_location:'رصيف سوق العبور', to_location:'النوالة', price:300 },
   ];
-  const transport = [{ id:id('c'), name:'عربية عم صابر', opening_balance:0,
-    entries: allDays.filter(()=>rnd()<0.4).map(d=>{ const r = pick(routes); return { id:id('e'), entry_date:d, from_location:r.from_location, to_location:r.to_location, price:null, price_manual:false, note:'' }; }),
-    payments:[pay(shift(weeks[1],6), 2000)] }];
+  const transport = ['عربية عم صابر','نقل أبو حمدي'].map(name=>({ id:id('c'), name, opening_balance:0,
+    entries: allDays.filter(()=>rnd()<0.4).map(d=>{ const r = pick(routes); const special = rnd()<0.1; return { id:id('e'), entry_date:d, from_location:r.from_location, to_location:r.to_location, price: special ? r.price+100 : null, price_manual: special, note: special ? 'مشوار بالليل' : '' }; }),
+    payments: weeklyPays(1500, 0.8, '') }));
 
-  const expenses = allDays.filter(()=>rnd()<0.5).map(d=>{ const c = pick(['أكل','أكل','بودرة','سيتريك','سكاكين']); return { id:id('x'), expense_date:d, category:c, custom_category:'', name:'', amount: c==='سكاكين' ? between(300,800,50) : between(150,600,25) }; });
-  const debts = [{ id:id('b'), debt_date: weeks[0], lender:'الحاج فتحي', amount:20000, repaid:5000, reason:'دفع للجلابة' }];
+  const expenses = allDays.filter(()=>rnd()<0.55).map(d=>{ const c = pick(['أكل','أكل','بودرة','سيتريك','سكاكين','أخرى']); return { id:id('x'), expense_date:d, category:c, custom_category: c==='أخرى' ? pick(['كهربا','صيانة ماكينة','مية']) : '', name: c==='سكاكين' ? 'سكاكين تقشير' : '', amount: c==='سكاكين' ? between(300,800,50) : between(150,700,25) }; });
+  const debts = [
+    { id:id('b'), debt_date: weeks[0], lender:'الحاج فتحي', amount:30000, repaid:15000, reason:'دفع للجلابة' },
+    { id:id('b'), debt_date: weeks[3], lender:'أبو خالد', amount:10000, repaid:0, reason:'يوميات العمال' },
+  ];
 
   const move = (fid, d, dir, qty) => ({ id:id('m'), factory_id:fid, move_date:d, direction:dir, qty, note:'' });
   const equipment = [
-    { id:id('q'), type:'برميل', start_qty:200, purchase_cost:12000,
-      factoryMovements:[move(factories[0].id, weeks[0], 'out', 40), move(factories[0].id, weeks[1], 'in', 25), move(factories[1].id, weeks[1], 'out', 30)],
-      sakinaStock:[{id:id('s'), sakina_id:sakinas[0].id, qty:20}], other:[{id:id('o'), location:'مفقود', qty:3}] },
-    { id:id('q'), type:'قفص', start_qty:500, purchase_cost:0, factoryMovements:[move(factories[2].id, weeks[1], 'out', 60)], sakinaStock:[{id:id('s'), sakina_id:sakinas[1].id, qty:80}], other:[] },
+    { id:id('q'), type:'برميل', start_qty:300, purchase_cost:15000,
+      factoryMovements: factories.slice(0,3).flatMap((f,i)=>[move(f.id, weeks[i], 'out', between(30,60,5)), move(f.id, weeks[i+2], 'in', between(10,30,5))]),
+      sakinaStock: sakinas.map(sk=>({id:id('s'), sakina_id:sk.id, qty: between(10,30,5)})), other:[{id:id('o'), location:'مفقود', qty:4}] },
+    { id:id('q'), type:'قفص', start_qty:600, purchase_cost:6000, factoryMovements:[move(factories[3].id, weeks[1], 'out', 80), move(factories[3].id, weeks[3], 'in', 50)], sakinaStock: sakinas.map(sk=>({id:id('s'), sakina_id:sk.id, qty: between(40,100,10)})), other:[] },
+    { id:id('q'), type:'صينية', start_qty:120, purchase_cost:0, factoryMovements:[], sakinaStock: sakinas.map(sk=>({id:id('s'), sakina_id:sk.id, qty: between(20,40,5)})), other:[] },
+    { id:id('q'), type:'سكينة تقشير', start_qty:80, purchase_cost:2400, factoryMovements:[], sakinaStock: sakinas.map(sk=>({id:id('s'), sakina_id:sk.id, qty: between(15,25)})), other:[{id:id('o'), location:'اتكسرت', qty:6}] },
   ];
-  const partners = [{ id:id('pa'), name:'محمود', share:60 }, { id:id('pa'), name:'أحمد', share:40 }];
+  const partners = [{ id:id('pa'), name:'محمود', share:50 }, { id:id('pa'), name:'أحمد', share:30 }, { id:id('pa'), name:'الحاج عبد الرحمن', share:20 }];
   const partnerTx = [
-    { id:id('pt'), partner_id: partners[0].id, tx_date: weeks[0], type:'إيداع', amount:30000, reason:'رأس مال إضافي' },
-    { id:id('pt'), partner_id: partners[1].id, tx_date: weeks[1], type:'سحب', amount:5000, reason:'مصروف بيت' },
+    { id:id('pt'), partner_id: partners[0].id, tx_date: weeks[0], type:'إيداع', amount:50000, reason:'رأس مال' },
+    { id:id('pt'), partner_id: partners[2].id, tx_date: weeks[0], type:'إيداع', amount:30000, reason:'رأس مال' },
+    { id:id('pt'), partner_id: partners[1].id, tx_date: weeks[2], type:'سحب', amount:5000, reason:'مصروف بيت' },
+    { id:id('pt'), partner_id: partners[0].id, tx_date: weeks[4], type:'سحب', amount:8000, reason:'' },
   ];
 
-  const db = { user: { name:'نوالة الحاج محمود (تجريبي)', capital:150000, owner_phone:'' }, prices, jalaba, factories, raseef, sakinas, 'takhrit-fixed': takhritFixed, banadeer, workers,
+  const db = { user: { name:'نوالة الحاج محمود (تجريبي)', capital:200000, owner_phone:'' }, prices, jalaba, factories, raseef, sakinas, 'takhrit-fixed': takhritFixed, banadeer, workers,
     'transport-routes': routes, transport, expenses, debts, equipment, 'partners-list': partners, 'partner-transactions': partnerTx, ...sakinaKeys };
   const out = {};
   Object.entries(db).forEach(([k,v])=>{ out['nawalty_db_'+k] = JSON.stringify(v); });
@@ -1245,7 +1259,7 @@ function Onboarding({ onDone }){
         <button className="w-full bg-leaf-deep text-cream rounded-xl py-3 font-bold">ابدأ</button>
         <div className="flex items-center gap-3 my-4 text-xs text-ink/50"><span className="flex-1 h-px bg-leaf-line/60"/>أو<span className="flex-1 h-px bg-leaf-line/60"/></div>
         <button type="button" onClick={()=>{ loadDemoData(); location.reload(); }} className="w-full border border-gold/60 text-gold-dark rounded-xl py-3 font-bold bg-gold/5">جرّب الأول ببيانات تجريبية</button>
-        <p className="text-xs text-ink/60 mt-3 text-center">موسم صغير فيه جلابة ومصانع ونوالات وعمال — تقدر تمسحه بعدين من «الإعدادات».</p>
+        <p className="text-xs text-ink/60 mt-3 text-center">موسم ٦ أسابيع فيه جلابة ومصانع ونوالات وعمال — تقدر تمسحه بعدين من «الإعدادات».</p>
       </form>
     </div>
   );
@@ -3267,6 +3281,7 @@ function Dashboard({db, user, setUser, setPage}){
           <ArtichokeMark className="w-12 h-12 mx-auto mb-2 opacity-80"/>
           <p className="mb-1 font-bold">لسه مفيش بيانات.</p>
           <p className="text-sm">ابدأ بأسعار الأسبوع من <button className="underline text-leaf-mid" onClick={()=>setPage('pricing')}>التسعير</button>، وبعدين سجّل جلاب أو نوالة.</p>
+          <button onClick={()=>{ loadDemoData(); location.reload(); }} className="mt-3 border border-gold/60 text-gold-dark rounded-xl px-4 py-2 text-sm font-bold bg-gold/5">أو جرّب ببيانات تجريبية</button>
         </div>
       )}
       {o.missing>0 && (
@@ -3488,7 +3503,7 @@ function SettingsPage({db, user, setUser}){
           <p className="text-sm text-ink/75 mb-3">إنت دلوقتي شغال على بيانات تجريبية. لما تخلص تجربة، امسحها وابدأ بنوالتك.</p>
           <button onClick={async()=>{ if(!(await askConfirm('مسح البيانات التجريبية والبدء من الأول؟', {confirmText:'امسحها'}))) return; const rm=[]; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith('nawalty_') && k!=='nawalty_pin') rm.push(k); } rm.forEach(k=>localStorage.removeItem(k)); location.reload(); }} className="bg-ink text-cream rounded-xl px-5 py-2.5 text-sm font-bold">امسح البيانات التجريبية وابدأ</button>
         </>) : (<>
-          <p className="text-sm text-ink/75 mb-3">حمّل موسم تجريبي (٣ أسابيع) عشان تشوف كل الشاشات شغالة. بياناتك الحالية هتنزل نسخة احتياطية منها الأول.</p>
+          <p className="text-sm text-ink/75 mb-3">حمّل موسم تجريبي (٦ أسابيع) عشان تشوف كل الشاشات شغالة. بياناتك الحالية هتنزل نسخة احتياطية منها الأول.</p>
           <button onClick={async()=>{ if(!(await askConfirm('تحميل البيانات التجريبية؟\nبياناتك الحالية هتتشال من الجهاز (هننزّل نسخة احتياطية منها الأول، وتقدر ترجعها من «استرجع من نسخة»).', {danger:true, confirmText:'حمّل التجريبي'}))) return; if(hasAnyData()) downloadBackup('قبل-التجريبي-'+todayStr()); loadDemoData(); setTimeout(()=>location.reload(), 600); }} className="border border-gold/60 text-gold-dark rounded-xl px-5 py-2.5 text-sm font-bold">حمّل بيانات تجريبية</button>
         </>)}
       </div>
