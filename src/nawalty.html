@@ -165,7 +165,7 @@ function auditAdd(entry){
 const AUDIT_SECTION_NAMES = {
   'jalaba':'الجلابة','factories':'المبيعات','raseef':'المشتريات','sakinas':'النوالات','sakina-workers':'عاملات النوالة','sakina-worker':'عاملات النوالة',
   'takhrit-fixed':'التخريط','banadeer':'البنادير','workers':'أنفار النوالة','worker':'أنفار النوالة','transport':'العربيات','transport-routes':'المشاوير الثابتة',
-  'expenses':'المصاريف','debts':'المديونات','equipment':'العدة','partners-list':'الشركاء','partner-transactions':'الشركاء','prices':'التسعير','stock-values':'المخزون','nawala':'بيانات النوالة',
+  'expenses':'المصاريف','debts':'المديونات','equipment':'العدة','partners-list':'الشركاء','partner-transactions':'الشركاء','prices':'التسعير','nawala':'بيانات النوالة',
 };
 function auditSectionOf(path){
   const seg = path.replace(/^\/api\//,'').split('/')[0].replace(/-(entries|payments|factory-movements|other)$/,'');
@@ -2941,11 +2941,11 @@ function PricingPage({db,setDb}){
 /* ---------------------------------------------------------- حسابات الرئيسية (مشتركة مع قفل الموسم) ---------------------------------------------------------- */
 async function loadAllData(){
   const F = SECTION_FIELDS;
-  const [jalaba, workers, takhritFixed, banadeer, factories, sakinas, expenses, debts, partnerTx, partnersList, raseef, transport, equipment, stockValues] = await Promise.all([
+  const [jalaba, workers, takhritFixed, banadeer, factories, sakinas, expenses, debts, partnerTx, partnersList, raseef, transport, equipment] = await Promise.all([
     apiFetch('/api/jalaba'), apiFetch('/api/workers'), apiFetch('/api/takhrit-fixed'), apiFetch('/api/banadeer'),
     apiFetch('/api/factories'), apiFetch('/api/sakinas'), apiFetch('/api/expenses'), apiFetch('/api/debts'),
     apiFetch('/api/partner-transactions'), apiFetch('/api/partners-list'), apiFetch('/api/raseef'), apiFetch('/api/transport'),
-    apiFetch('/api/equipment'), apiFetch('/api/stock-values'),
+    apiFetch('/api/equipment'),
   ]);
   const sakinaWorkers = (await Promise.all(sakinas.map(s=>apiFetch(`/api/sakinas/${s.id}/workers`)))).flat();
   const m = (list, f) => (list||[]).map(r=>mapPersonFromServer(r, f));
@@ -2955,7 +2955,6 @@ async function loadAllData(){
     sakinas, expenses: (expenses||[]).map(mapExpenseFromServer), debts: (debts||[]).map(mapDebtFromServer),
     partnerTx: (partnerTx||[]).map(x=>({ date:x.tx_date, partnerId:x.partner_id, type:x.type, amount: parseFloat(x.amount)||0 })),
     partnersList: partnersList||[], equipment: (equipment||[]).map(mapEquipmentItemFromServer),
-    stockValues: (stockValues||[]).map(s=>({ id:s.id, weekStart: normalizeWeekStart(s.week_start), value: parseFloat(s.value)||0 })),
   };
 }
 const OVERVIEW_GROUPS = [
@@ -2995,21 +2994,14 @@ function computeOverview(data, db, user, ws){
   const cash = capital + groups.factories.paid + partnersNet + debtsOutstanding - sum(costKeys,'paid') - expenses - equipmentCost;
   const receivables = OVERVIEW_GROUPS.reduce((s,g)=>s+groups[g.key].owedToUs,0);
   const payables = OVERVIEW_GROUPS.reduce((s,g)=>s+groups[g.key].owedToThem,0) + debtsOutstanding;
-  // المخزون: قيمة البضاعة اللي لسه ما اتباعتش في آخر كل أسبوع (بيكتبها صاحب النوالة)
-  const sv = data.stockValues.slice().sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
-  const openingStock = parseFloat(user.opening_stock)||0;
-  const stockAt = w => { const exact = sv.find(s=>s.weekStart===w); return exact ? exact.value : null; };
-  const stockBefore = w => { const prev = sv.filter(s=>s.weekStart<w); return prev.length ? prev[prev.length-1].value : openingStock; };
-  const closingStock = sv.length ? sv[sv.length-1].value : openingStock;
   const costsSeason = sum(costKeys,'earned');
-  const seasonProfit = groups.factories.earned - costsSeason - expenses - equipmentCost + (closingStock - openingStock);
+  // الخرشوف مالوش مخزون بيتبقى: اللي بيدخل بيتشغّل ويتباع في نفس الأسبوع
+  const seasonProfit = groups.factories.earned - costsSeason - expenses - equipmentCost;
   const weekCosts = sum(costKeys,'earnedWeek');
-  const weekFlow = groups.factories.earnedWeek - weekCosts - expensesWeek;
-  const stockEnd = stockAt(ws);
-  const weekProfit = stockEnd === null ? null : weekFlow + stockEnd - stockBefore(ws);
+  const weekProfit = groups.factories.earnedWeek - weekCosts - expensesWeek;
   const missing = OVERVIEW_GROUPS.reduce((s,g)=>s+groups[g.key].missing,0);
   return { groups, expenses, expensesWeek, equipmentCost, partnersNet, debtsOutstanding, capital, cash, receivables, payables,
-    seasonProfit, weekFlow, weekProfit, stockEnd, stockPrev: stockBefore(ws), openingStock, closingStock, laborWeek: labor('earnedWeek'), missing };
+    seasonProfit, weekProfit, laborWeek: labor('earnedWeek'), missing };
 }
 
 /* ---------------------------------------------------------- DASHBOARD ---------------------------------------------------------- */
@@ -3018,11 +3010,9 @@ function Dashboard({db, user, setUser, setPage}){
   const [error,setError] = useState('');
   const [ws,setWs] = useState(getWeekStart(todayStr()));
   const [phone,setPhone] = useState(user.owner_phone||'');
-  const [stockDraft,setStockDraft] = useState('');
   const [showDetails,setShowDetails] = useState(false);
   useEffect(()=>{ load(); }, []);
   async function load(){ setError(''); try{ setData(await loadAllData()); }catch(e){ setError(e.message); } }
-  useEffect(()=>{ if(data){ const s = data.stockValues.find(x=>x.weekStart===ws); setStockDraft(s ? String(s.value) : ''); } }, [ws, data]);
   if(error) return <ErrorBox error={error} onRetry={load}/>;
   if(!data) return <LoadingBox text="بيحسب ملخص النوالة..."/>;
 
@@ -3031,16 +3021,6 @@ function Dashboard({db, user, setUser, setPage}){
   async function saveNawala(patch){
     try{ const updated = await apiFetch('/api/nawala', {method:'PUT', body:JSON.stringify({...patch})}); setUser({...user, ...updated}); return true; }
     catch(e){ notify(e.message, {tone:'error'}); return false; }
-  }
-  async function saveStock(){
-    const v = stockDraft === '' ? null : parseFloat(stockDraft);
-    const ex = data.stockValues.find(x=>x.weekStart===ws);
-    try{
-      if(v === null){ if(ex) await apiFetch('/api/stock-values/'+ex.id, {method:'DELETE'}); }
-      else if(ex) await apiFetch('/api/stock-values/'+ex.id, {method:'PUT', body:JSON.stringify({week_start: ws, value: v})});
-      else await apiFetch('/api/stock-values', {method:'POST', body:JSON.stringify({week_start: ws, value: v})});
-      await load(); notify('اتحفظت قيمة المخزون');
-    }catch(e){ notify(e.message, {tone:'error'}); }
   }
   const shiftWeek = n => { const d = new Date(ws+'T00:00:00'); d.setDate(d.getDate()+7*n); setWs(localDateStr(d)); };
   const rows = [
@@ -3060,8 +3040,7 @@ function Dashboard({db, user, setUser, setPage}){
   function sendWeekly(){
     const lines = ['ملخص أسبوع '+getWeekRangeLabel(ws)+' — '+(user.name||'النوالة'), ''];
     rows.forEach(r=>lines.push(`${r.label}: ${r.sign}${fmtNum(r.value)}`));
-    lines.push('', 'صافي حركة الأسبوع: '+fmtNum(o.weekFlow));
-    if(o.weekProfit!==null) lines.push('صافي ربح الأسبوع بعد المخزون: '+fmtNum(o.weekProfit));
+    lines.push('', 'صافي ربح الأسبوع: '+fmtNum(o.weekProfit));
     lines.push('', 'السيولة: '+fmtNum(o.cash), 'ليك عند الناس: '+fmtNum(o.receivables), 'عليك للناس: '+fmtNum(o.payables));
     waShare(lines.join('\n'), phone || user.owner_phone);
   }
@@ -3113,23 +3092,8 @@ function Dashboard({db, user, setUser, setPage}){
           ))}
         </div>
         <div className="mt-5 pt-4 border-t border-leaf-line/30 flex items-center justify-between gap-2">
-          <span className="font-bold text-ink">صافي حركة الأسبوع <span className="text-xs text-ink/60 font-normal">(من غير حساب المخزون)</span></span>
-          <span className={`font-display text-2xl ${o.weekFlow>=0?'text-leaf-deep':'text-rust'}`}>{money(o.weekFlow)}</span>
-        </div>
-        <div className="mt-4 bg-cream/70 rounded-2xl p-4">
-          <label className="block text-sm font-bold text-ink/80 mb-1">قيمة البضاعة اللي في المخزن آخر الأسبوع ده</label>
-          <p className="text-xs text-ink/65 mb-2">خرشوف خام أو متجهز لسه ما اتباعش (بسعر شرائه). من غيرها، أسبوع الشراء الكتير هيبان خسران.</p>
-          <div className="flex gap-2 flex-wrap items-center">
-            <input type="number" inputMode="decimal" value={stockDraft} onChange={e=>setStockDraft(e.target.value)} placeholder="مثال: 25000" className="w-40 rounded-xl border border-leaf-line px-3 py-2.5 num bg-white"/>
-            <button onClick={saveStock} className="bg-leaf-deep text-cream rounded-xl px-4 py-2.5 text-sm font-bold">حفظ</button>
-            <span className="text-xs text-ink/65">المخزون أول الأسبوع: <span className="num">{num(o.stockPrev)}</span></span>
-          </div>
-          {o.weekProfit!==null && (
-            <div className="mt-3 flex items-center justify-between">
-              <span className="font-bold">صافي ربح الأسبوع (بعد المخزون)</span>
-              <span className={`font-display text-2xl ${o.weekProfit>=0?'text-leaf-deep':'text-rust'}`}>{money(o.weekProfit)}</span>
-            </div>
-          )}
+          <span className="font-bold text-ink text-lg">صافي ربح الأسبوع</span>
+          <span className={`font-display text-3xl ${o.weekProfit>=0?'text-leaf-deep':'text-rust'}`}>{money(o.weekProfit)}</span>
         </div>
         <div className="mt-4 flex items-center gap-2 flex-wrap">
           <label className="text-sm text-ink/75 font-bold">رقم واتساب صاحب النوالة:</label>
@@ -3157,7 +3121,7 @@ function Dashboard({db, user, setUser, setPage}){
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CapitalCard capital={o.capital} onSave={v=>saveNawala({capital:v})}/>
-        <StatCard label="ربح الموسم لحد دلوقتي" value={money(o.seasonProfit)} icon="coin" tone={o.seasonProfit>=0?'white':'rust'} sub={`بعد المصاريف (${fmtNum(o.expenses)}) وتكلفة العدة (${fmtNum(o.equipmentCost)}) وفرق المخزون (${fmtNum(o.closingStock-o.openingStock)})`}/>
+        <StatCard label="ربح الموسم لحد دلوقتي" value={money(o.seasonProfit)} icon="coin" tone={o.seasonProfit>=0?'white':'rust'} sub={`بعد المصاريف (${fmtNum(o.expenses)}) وتكلفة العدة (${fmtNum(o.equipmentCost)})`}/>
       </div>
 
       {partners.length>0 && (
@@ -3236,7 +3200,7 @@ function SettingsPage({db, user, setUser}){
   async function closeSeason(){
     if(!LOCAL_MODE){ notify('قفل الموسم من هنا متاح في الوضع المحلي بس', {tone:'error'}); return; }
     const name = seasonName.trim() || ('موسم '+todayStr().slice(0,4));
-    if(!(await askConfirm(`قفل «${name}» وبدء موسم جديد:\n• هنزّل أرشيف كامل للموسم ده على جهازك.\n• رصيد كل جلاب ومصنع وعامل هيترحّل كرصيد أول الموسم الجديد، والعمليات والدفعات هتتشال.\n• المصاريف وحركات الشركاء وقيم المخزون هتتصفّر.\n• الأسعار والمديونات والعدة هتفضل زي ما هي.\n• رأس المال الجديد = السيولة دلوقتي.`, {danger:true, typeToConfirm:'قفل', confirmText:'اقفل الموسم'}))) return;
+    if(!(await askConfirm(`قفل «${name}» وبدء موسم جديد:\n• هنزّل أرشيف كامل للموسم ده على جهازك.\n• رصيد كل جلاب ومصنع وعامل هيترحّل كرصيد أول الموسم الجديد، والعمليات والدفعات هتتشال.\n• المصاريف وحركات الشركاء هتتصفّر.\n• الأسعار والمديونات والعدة هتفضل زي ما هي.\n• رأس المال الجديد = السيولة دلوقتي.`, {danger:true, typeToConfirm:'قفل', confirmText:'اقفل الموسم'}))) return;
     try{
       downloadBackup('أرشيف-'+name);
       const data = await loadAllData();
@@ -3252,10 +3216,10 @@ function SettingsPage({db, user, setUser}){
           return {...row, opening_balance: Math.round(t.remaining*100)/100, entries: [], payments: []};
         }));
       });
-      localStoreSet('expenses', []); localStoreSet('partner-transactions', []); localStoreSet('stock-values', []);
+      localStoreSet('expenses', []); localStoreSet('partner-transactions', []);
       localStoreSet('equipment', localStoreGet('equipment', []).map(x=>({...x, purchase_cost: 0})));
       const u = localStoreGet('user', {});
-      localStoreSet('user', {...u, capital: Math.round((o.cash - o.debtsOutstanding)*100)/100, opening_stock: o.closingStock});
+      localStoreSet('user', {...u, capital: Math.round((o.cash - o.debtsOutstanding)*100)/100});
       localStoreSet('seasons', [...seasons, { name, closedAt: todayStr(), sales: o.groups.factories.earned, profit: o.seasonProfit, cash: o.cash }]);
       auditAdd({ method:'SEASON', path:'/season', section:'قفل الموسم', after:{ name } });
       notify('اتقفل الموسم واتفتح موسم جديد');
