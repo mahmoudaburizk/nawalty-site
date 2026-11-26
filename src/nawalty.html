@@ -46,6 +46,9 @@ tailwind.config = {
   input:focus, select:focus, textarea:focus { border-color: #163D24 !important; box-shadow: 0 0 0 2px rgba(22, 61, 36, 0.15) !important; }
   button { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
   button:active { transform: scale(0.97); }
+  button:focus-visible, a:focus-visible, select:focus-visible, [role=button]:focus-visible { outline: 2px solid #4BAF62; outline-offset: 2px; }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 </style>
 </head>
 <body class="bg-cream text-ink">
@@ -594,7 +597,7 @@ const toNum = v => (v === '' || v === null || v === undefined || isNaN(v)) ? nul
 function getWeekRangeLabel(weekStart){
   const s = new Date(weekStart+'T00:00:00');
   const e = new Date(s); e.setDate(e.getDate()+6);
-  const fmt = dt => dt.toLocaleDateString('ar-EG',{day:'numeric',month:'numeric'});
+  const fmt = dt => dt.toLocaleDateString('ar-EG-u-nu-latn',{day:'numeric',month:'numeric'});
   return fmt(s)+' - '+fmt(e);
 }
 function isCurrentWeek(dateStr){ return getWeekStart(dateStr)===getWeekStart(todayStr()); }
@@ -602,15 +605,15 @@ function formatDateWithDay(dateStr){
   if(!dateStr) return '—';
   const d = new Date(dateStr+'T00:00:00');
   if(isNaN(d.getTime())) return dateStr;
-  const dayName = d.toLocaleDateString('ar-EG', {weekday:'long'});
-  const md = d.toLocaleDateString('ar-EG', {day:'numeric', month:'numeric'});
+  const dayName = d.toLocaleDateString('ar-EG-u-nu-latn', {weekday:'long'});
+  const md = d.toLocaleDateString('ar-EG-u-nu-latn', {day:'numeric', month:'numeric'});
   return dayName+' '+md;
 }
 function formatDateShort(dateStr){
   if(!dateStr) return '';
   const d = new Date(dateStr+'T00:00:00');
   if(isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('ar-EG', {day:'2-digit', month:'2-digit', year:'numeric'});
+  return d.toLocaleDateString('ar-EG-u-nu-latn', {day:'2-digit', month:'2-digit', year:'numeric'});
 }
 function groupByWeek(entries){
   const map = {};
@@ -1000,7 +1003,7 @@ function Toaster(){
     return ()=>{ UI_BUS.toasts = null; };
   }, []);
   return (
-    <div className="fixed bottom-4 inset-x-0 z-[60] flex flex-col items-center gap-2 px-4 pointer-events-none" aria-live="polite">
+    <div className="fixed bottom-20 md:bottom-4 inset-x-0 z-[60] flex flex-col items-center gap-2 px-4 pointer-events-none" aria-live="polite">
       {items.map(t=>(
         <div key={t.id} role="status" className={`pointer-events-auto max-w-md w-full rounded-2xl shadow-card-hover px-4 py-3 flex items-center justify-between gap-3 text-sm font-bold rise ${t.tone==='error'?'bg-rust text-white':'bg-ink text-cream'}`}>
           <span>{t.message}</span>
@@ -1167,7 +1170,7 @@ function Sidebar({page,setPage,user,onLock,onLogout,mobileOpen,setMobileOpen}){
       </div>
       <nav className="flex-1 overflow-y-auto py-5 px-4 space-y-1.5" aria-label="الأقسام">
         {NAV.map(item=>(
-          <button key={item.key} onClick={()=>{setPage(item.key); setMobileOpen(false);}} aria-current={page===item.key?'page':undefined}
+          <button key={item.key} onClick={()=>{setPage(item.key); setMobileOpen(false); window.scrollTo(0,0);}} aria-current={page===item.key?'page':undefined}
             className={`w-full flex items-center gap-4 px-5 py-3 rounded-[1.25rem] text-[15px] transition-all
               ${page===item.key ? 'bg-white text-leaf-deep font-black shadow-[0_4px_15px_rgba(0,0,0,0.15)]' : 'text-cream/85 hover:bg-white/10 hover:text-white'}`}>
             <Icon name={item.icon} className="w-5 h-5 shrink-0"/>
@@ -1184,6 +1187,29 @@ function Sidebar({page,setPage,user,onLock,onLogout,mobileOpen,setMobileOpen}){
   );
 }
 
+// شريط سفلي على الموبايل للأقسام اللي بتتفتح كل يوم
+const BOTTOM_NAV = ['dashboard','sales','jalaba','sakina','pricing'];
+function BottomNav({page, setPage, setMobileOpen}){
+  const items = BOTTOM_NAV.map(k=>NAV.find(n=>n.key===k));
+  const short = { dashboard:'الرئيسية', sales:'المبيعات', jalaba:'الجلابة', sakina:'النوالات', pricing:'التسعير' };
+  const inMore = !BOTTOM_NAV.includes(page);
+  return (
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-leaf-line/50 pb-safe" aria-label="الأقسام الأساسية">
+      <div className="grid grid-cols-6">
+        {items.map(it=>(
+          <button key={it.key} onClick={()=>{ setPage(it.key); window.scrollTo(0,0); }} aria-current={page===it.key?'page':undefined}
+            className={`flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] text-[11px] font-bold ${page===it.key?'text-leaf-deep':'text-ink/55'}`}>
+            <span className={`px-3 py-1 rounded-full ${page===it.key?'bg-leaf-pale':''}`}><Icon name={it.icon} className="w-5 h-5"/></span>{short[it.key]}
+          </button>
+        ))}
+        <button onClick={()=>setMobileOpen(true)} className={`flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] text-[11px] font-bold ${inMore?'text-leaf-deep':'text-ink/55'}`} aria-label="كل الأقسام">
+          <span className={`px-3 py-1 rounded-full ${inMore?'bg-leaf-pale':''}`}><Icon name="dots" className="w-5 h-5"/></span>{inMore ? (NAV.find(n=>n.key===page)||{}).label.split(' ')[0] : 'المزيد'}
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 function Topbar({title, setMobileOpen, setPage}){
   const days = LOCAL_MODE ? daysSinceBackup() : 0;
   const remind = LOCAL_MODE && days >= 7 && hasAnyData();
@@ -1196,7 +1222,7 @@ function Topbar({title, setMobileOpen, setPage}){
         <h2 className="font-display text-2xl text-leaf-deep md:hidden truncate">{title}</h2>
         <div className="flex items-center gap-3">
           {LOCAL_MODE && <span title="البيانات بتتحفظ على المتصفح ده بس" className="hidden sm:inline text-xs font-bold px-3 py-1 rounded-full bg-gold/20 text-gold-dark border border-gold/40">محفوظ على الجهاز ده</span>}
-          <div className="hidden md:block text-sm text-ink/65">{new Date().toLocaleDateString('ar-EG',{weekday:'long', year:'numeric', month:'long', day:'numeric'})}</div>
+          <div className="hidden md:block text-sm text-ink/65">{new Date().toLocaleDateString('ar-EG-u-nu-latn',{weekday:'long', year:'numeric', month:'long', day:'numeric'})}</div>
         </div>
       </div>
       {remind && (
@@ -1216,8 +1242,8 @@ function Topbar({title, setMobileOpen, setPage}){
 function VerseHeader({text}){
   if(!text) return null;
   return (
-    <div className="mb-4 rounded-full bg-white/50 px-6 py-2.5 text-center border border-white/80">
-      <p className="font-display text-lg md:text-xl text-leaf-deep/90 leading-relaxed">{text}</p>
+    <div className="mb-3 md:mb-4 md:rounded-full md:bg-white/50 md:px-6 py-1 md:py-2.5 text-center md:border md:border-white/80">
+      <p className="font-display text-sm md:text-xl text-leaf-deep/70 md:text-leaf-deep/90 leading-relaxed">{text}</p>
     </div>
   );
 }
@@ -1230,13 +1256,13 @@ function StatCard({label, value, icon, tone="leaf", sub, big}){
     white: "bg-white/80 text-ink border border-white"
   };
   return (
-    <div className={`rounded-[2rem] ${big?'p-7':'p-5'} flex items-center justify-between gap-3 shadow-card rise ${tones[tone]}`}>
+    <div className={`rounded-3xl md:rounded-[2rem] ${big?'p-5 md:p-7':'p-4 md:p-5'} flex items-center justify-between gap-3 shadow-card rise ${tones[tone]}`}>
       <div className="min-w-0">
         <div className={`text-sm mb-1.5 font-bold ${tone==='white'?'text-ink/75':'opacity-90'}`}>{label}</div>
-        <div className={`${big?'text-3xl md:text-4xl':'text-2xl'} font-bold num`}>{value}</div>
+        <div className={`${big?'text-2xl md:text-4xl':'text-xl md:text-2xl'} font-bold num`}>{value}</div>
         {sub && <div className={`text-xs mt-1.5 ${tone==='white'?'text-ink/65':'opacity-80'}`}>{sub}</div>}
       </div>
-      {icon && <div className={`shrink-0 p-3 rounded-full ${tone==='white'?'bg-cream':'bg-white/10'}`}><Icon name={icon} className="w-7 h-7"/></div>}
+      {icon && <div className={`shrink-0 p-2.5 md:p-3 rounded-full ${tone==='white'?'bg-cream':'bg-white/10'}`}><Icon name={icon} className="w-6 h-6 md:w-7 md:h-7"/></div>}
     </div>
   );
 }
@@ -1677,7 +1703,8 @@ function PersonAccount(props){
   const {title, icon, personLabel, entryLabel, paymentsLabel, entryColumns, extraColumns, calcEntryTotal, db, people, setPeople,
     weeklyGrouping, weeklyQtyText, hideHeader, remote, verse, showWeeklyPricing, personType,
     direction='payable', earnedLabel='المستحق', paidLabel='المدفوع', columnVisible, afterAddEntry} = props;
-  const [selected,setSelected]=useState(people[0]?.id || null);
+  // على الموبايل بنبدأ بالقائمة، وعلى الشاشة الكبيرة بأول شخص
+  const [selected,setSelected]=useState(()=> (window.innerWidth >= 1024 || people.length === 1) ? (people[0]?.id || null) : null);
   const [entryForm,setEntryForm]=useState({});
   const [invalid,setInvalid]=useState({});
   const [paymentForm,setPaymentForm]=useState({date:todayStr(), amount:'', note:''});
@@ -1687,6 +1714,9 @@ function PersonAccount(props){
   const [showPricing,setShowPricing]=useState(false);
   const [menuOpen,setMenuOpen]=useState(false);
   const [showWeeks,setShowWeeks]=useState(false);
+  const [showMore,setShowMore]=useState(false);
+  const [showPeriod,setShowPeriod]=useState(false);
+  const formRef = React.useRef(null);
 
   const isFn = typeof entryColumns === 'function';
   const activeColumns = isFn ? entryColumns(entryForm) : entryColumns;
@@ -1739,6 +1769,9 @@ function PersonAccount(props){
       setPerson(person.id, p=>({...p, entries:[e, ...p.entries]}));
       if(afterAddEntry){ try{ await afterAddEntry(person, entryForm, e); }catch(err){ notify(err.message, {tone:'error'}); } }
       setEntryForm(defaultEntryForm(entryForm));
+      const t = calcEntryTotal(e, getPriceSetForDate(db, e.date), person);
+      notify(isMissingPrice(e, t) ? 'اتضافت — بس ملهاش سعر لسه' : 'اتضافت: '+fmtNum(t)+' جنيه');
+      setTimeout(()=>{ const el = formRef.current && formRef.current.querySelector('input[type=number]'); if(el) el.focus(); }, 60);
     }catch(err){ notify(err.message, {tone:'error'}); }
   }
   async function editEntry(id, draft){
@@ -1807,29 +1840,38 @@ function PersonAccount(props){
   return (
     <div className={hideHeader?'':'p-4 md:p-8'}>
       {!hideHeader && <VerseHeader text={verse}/>}
-      {!hideHeader && <h1 className="font-display text-3xl text-leaf-deep mb-5 flex items-center gap-2"><Icon name={icon} className="w-7 h-7"/>{title}</h1>}
+      {!hideHeader && <h1 className="hidden md:flex font-display text-3xl text-leaf-deep mb-5 items-center gap-2"><Icon name={icon} className="w-7 h-7"/>{title}</h1>}
 
       <div className="flex flex-col lg:flex-row gap-5">
-        <PersonList people={people} selected={selected} setSelected={id=>{setSelected(id); setShowPricing(false); setMenuOpen(false);}} personLabel={personLabel} totalsOf={totalsOf} direction={direction} onAdd={addPerson}/>
+        <div className={`lg:w-80 shrink-0 ${person ? 'hidden lg:block' : ''}`}>
+          <PersonList people={people} selected={selected} setSelected={id=>{setSelected(id); setShowPricing(false); setMenuOpen(false); setShowPeriod(false); window.scrollTo(0,0);}} personLabel={personLabel} totalsOf={totalsOf} direction={direction} onAdd={addPerson}/>
+        </div>
 
         <div className="flex-1 min-w-0">
-          {!person && <div className="bg-white border border-dashed border-leaf-line rounded-2xl p-10 text-center text-ink/65">اختار {personLabel} من القائمة، أو ضيف واحد جديد</div>}
+          {!person && (
+            <div className="hidden lg:block bg-white/70 border border-dashed border-leaf-line rounded-2xl p-10 text-center text-ink/70">
+              {people.length ? <>اختار {personLabel} من القائمة عشان تشوف حسابه</> : <><b className="block text-leaf-deep text-base mb-1">ابدأ بأول {personLabel}</b>اكتب الاسم في الخانة اللي على اليمين واضغط +</>}
+            </div>
+          )}
           {person && (()=>{
             const t = totalsOf(person);
             const b = balanceInfo(t.remaining, direction);
             const weeks = weekSummaries(person, calcEntryTotal, db);
             return (
-            <div className="space-y-5">
-              <div className="bg-white/95 rounded-3xl p-5 shadow-card border border-leaf-line/30">
+            <div className="space-y-4 md:space-y-5">
+              <div className="bg-white/95 rounded-3xl p-4 md:p-5 shadow-card border border-leaf-line/30">
+                <button onClick={()=>setSelected(null)} className="lg:hidden text-sm text-leaf-mid font-bold mb-2 flex items-center gap-1 -mt-1 py-1">‹ كل القائمة</button>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <h2 className="text-2xl font-bold text-ink">{person.name}</h2>
-                    <p className="text-xs text-ink/65">{personLabel}</p>
+                    <button onClick={()=>setShowPeriod(v=>!v)} className="text-xs text-ink/70 mt-0.5 flex items-center gap-1 hover:text-leaf-deep" aria-expanded={showPeriod}>
+                      <Icon name="search" className="w-3.5 h-3.5"/>فترة الكشف: <b>{(from||to) ? `${from?formatDateShort(from):'البداية'} ← ${to?formatDateShort(to):'النهارده'}` : 'كل الفترة'}</b>
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {showWeeklyPricing && <button onClick={()=>setShowPricing(v=>!v)} className={`text-xs px-3.5 py-2.5 rounded-2xl border font-bold flex items-center gap-1.5 ${showPricing?'bg-gold text-white border-gold':'border-gold/50 text-gold-dark bg-white'}`}><Icon name="tag" className="w-4 h-4"/>تسعير خاص</button>}
-                    <button onClick={()=>downloadStatement(person)} className="text-xs px-3.5 py-2.5 rounded-2xl border border-leaf-line/60 flex items-center gap-1.5 text-leaf-deep bg-white font-bold"><Icon name="download" className="w-4 h-4"/>كشف PDF</button>
-                    <button onClick={()=>shareStatement(person)} className="text-xs px-3.5 py-2.5 rounded-2xl border border-[#25D366]/40 flex items-center gap-1.5 text-[#128C7E] bg-white font-bold"><Icon name="whatsapp" className="w-4 h-4"/>واتساب</button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {showWeeklyPricing && <button onClick={()=>setShowPricing(v=>!v)} className={`flex-1 sm:flex-none justify-center text-xs px-3 py-2.5 rounded-2xl border font-bold flex items-center gap-1.5 ${showPricing?'bg-gold text-white border-gold':'border-gold/50 text-gold-dark bg-white'}`}><Icon name="tag" className="w-4 h-4 shrink-0"/><span className="whitespace-nowrap">تسعير<span className="hidden sm:inline"> خاص</span></span></button>}
+                    <button onClick={()=>downloadStatement(person)} className="flex-1 sm:flex-none justify-center text-xs px-3 py-2.5 rounded-2xl border border-leaf-line/60 flex items-center gap-1.5 text-leaf-deep bg-white font-bold"><Icon name="download" className="w-4 h-4 shrink-0"/><span className="whitespace-nowrap"><span className="hidden sm:inline">كشف </span>PDF</span></button>
+                    <button onClick={()=>shareStatement(person)} className="flex-1 sm:flex-none justify-center text-xs px-3 py-2.5 rounded-2xl border border-[#25D366]/40 flex items-center gap-1.5 text-[#128C7E] bg-white font-bold"><Icon name="whatsapp" className="w-4 h-4"/>واتساب</button>
                     <div className="relative">
                       <button onClick={()=>setMenuOpen(v=>!v)} className="p-2.5 rounded-2xl border border-leaf-line/60 text-ink/70 bg-white" aria-label="خيارات أكتر" aria-expanded={menuOpen}><Icon name="dots" className="w-4 h-4"/></button>
                       {menuOpen && (
@@ -1840,22 +1882,22 @@ function PersonAccount(props){
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap mt-3 text-xs">
+                {showPeriod && <div className="flex items-center gap-2 flex-wrap mt-3 text-xs bg-cream/60 rounded-xl p-2">
                   <span className="text-ink/70 font-bold">فترة الكشف:</span>
                   <div className="w-36"><DateInput value={from} onChange={e=>setFrom(e.target.value)} placeholder="من البداية"/></div>
                   <span className="text-ink/60">إلى</span>
                   <div className="w-36"><DateInput value={to} onChange={e=>setTo(e.target.value)} placeholder="لحد النهارده"/></div>
                   {(from||to) && <button onClick={()=>{setFrom('');setTo('');}} className="text-leaf-mid underline">كل الفترة</button>}
-                </div>
+                </div>}
               </div>
 
               {showPricing && showWeeklyPricing && <PersonWeeklyPricing person={person} personType={personType} onSavePrices={savePersonPrices} onClose={()=>setShowPricing(false)}/>}
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className={`grid ${t.opening?'grid-cols-2':'grid-cols-3'} sm:grid-cols-4 gap-2 md:gap-3`}>
                 {t.opening ? <div className="bg-white rounded-xl border border-leaf-line/30 p-3 text-center"><div className="text-xs text-ink/65 mb-1">رصيد أول الموسم</div><div className="font-bold num">{num(t.opening)}</div></div> : null}
                 <div className="bg-white rounded-xl border border-leaf-line/30 p-3 text-center"><div className="text-xs text-ink/65 mb-1">{earnedLabel}</div><div className="font-bold num">{num(t.earned)}</div></div>
                 <div className="bg-white rounded-xl border border-leaf-line/30 p-3 text-center"><div className="text-xs text-ink/65 mb-1">{paidLabel}</div><div className="font-bold num text-gold-dark">{num(t.paid)}</div></div>
-                <div className={`rounded-xl p-3 text-center text-white ${b.tone==='rust'?'bg-rust':b.tone==='gold'?'bg-gold':'bg-leaf-deep'}`}><div className="text-xs opacity-90 mb-1">{b.text}</div><div className="font-bold num text-lg">{num(b.amount)}</div></div>
+                <div className={`rounded-xl p-3 text-center text-white ${t.opening?'':'col-span-1'} ${b.tone==='rust'?'bg-rust':b.tone==='gold'?'bg-gold':'bg-leaf-deep'}`}><div className="text-xs opacity-90 mb-1">{b.text}</div><div className="font-bold num text-lg">{num(b.amount)}</div></div>
               </div>
 
               {t.missing > 0 && (
@@ -1898,17 +1940,39 @@ function PersonAccount(props){
 
               <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
                 <h3 className="font-bold text-sm text-leaf-deep mb-3">{entryLabel||'العمليات'}</h3>
-                <form onSubmit={e => { e.preventDefault(); addEntry(); }} noValidate>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
-                    <div><label className="block text-xs text-ink/70 mb-1">التاريخ</label><DateInput value={entryForm.date} invalid={invalid.date} onChange={e=>setEntryForm({...entryForm,date:e.target.value})}/></div>
-                    {activeColumns.map(c=>(
+                <form ref={formRef} onSubmit={e => { e.preventDefault(); addEntry(); }} noValidate>
+                  {(()=>{
+                    const field = c => (
                       <div key={c.key} className={c.type==='checkbox'?'flex items-end':''}>
                         {c.type!=='checkbox' && <label className="block text-xs text-ink/70 mb-1">{c.formLabel||c.label}{c.required && <span className="text-rust"> *</span>}</label>}
                         <FieldInput field={c} invalid={invalid[c.key]} value={entryForm[c.key]} onChange={v=>{ const next = {...entryForm,[c.key]:v}; setEntryForm(isFn ? fixSelectValues(next, entryColumns(next)) : next); if(invalid[c.key]) setInvalid({...invalid,[c.key]:false}); }}/>
                       </div>
-                    ))}
-                  </div>
-                  <button type="submit" className="bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-xl px-5 py-2.5 flex items-center gap-2 mb-2 font-bold"><Icon name="plus" className="w-4 h-4"/>إضافة</button>
+                    );
+                    const main = activeColumns.filter(c=>!c.optional), opt = activeColumns.filter(c=>c.optional);
+                    const optFilled = opt.some(c=>{ const v = entryForm[c.key]; return v!=='' && v!==undefined && v!==null && v!=='none' && v!==false; });
+                    const open = showMore || optFilled;
+                    const preview = entryQty(entryForm) > 0 ? calcEntryTotal(entryForm, getPriceSetForDate(db, entryForm.date), person) : null;
+                    return (<>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                        <div><label className="block text-xs text-ink/70 mb-1">التاريخ</label><DateInput value={entryForm.date} invalid={invalid.date} onChange={e=>setEntryForm({...entryForm,date:e.target.value})}/></div>
+                        {main.map(field)}
+                      </div>
+                      {opt.length>0 && (
+                        <div className="mb-3">
+                          <button type="button" onClick={()=>setShowMore(v=>!v)} aria-expanded={open} className="text-xs font-bold text-leaf-mid flex items-center gap-1 py-1">
+                            <span className="whitespace-nowrap">{open ? '− اخفي الخيارات الإضافية' : '+ خيارات إضافية'}</span>{!open && <span className="font-normal text-ink/60 truncate max-w-[55vw] sm:max-w-none">({opt.map(c=>(c.formLabel||c.label).replace(/ ?\(اختياري\)/,'')).join('، ')})</span>}
+                          </button>
+                          {open && <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2 p-3 rounded-xl bg-cream/50">{opt.map(field)}</div>}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 flex-wrap mb-2">
+                        <button type="submit" className="bg-leaf-deep hover:bg-leaf-mid text-cream text-sm rounded-xl px-6 py-2.5 flex items-center gap-2 font-bold"><Icon name="plus" className="w-4 h-4"/>إضافة</button>
+                        {preview!==null && (isMissingPrice(entryForm, preview)
+                          ? <span className="text-xs font-bold text-rust">مفيش سعر للأسبوع ده — هتتسجل «بدون سعر»</span>
+                          : <span className="text-sm text-ink/75">الإجمالي: <b className="num text-leaf-deep">{money(preview)}</b></span>)}
+                      </div>
+                    </>);
+                  })()}
                 </form>
 
                 {weeklyGrouping ? (
@@ -2010,10 +2074,10 @@ const priceTag = (text, cls) => <span className={`text-[10px] font-bold px-1.5 p
 
 function JalabaPage({db}){
   const entryColumns = [
-    {key:'kuz', label:'الكمية', type:'number', required:true},
+    {key:'kuz', label:'الكمية', type:'number', required:true, render:row=>row.kuz===''||row.kuz==null?'—':num(row.kuz)+' '+(row.unit==='طن'?'طن':'كوز')},
     {key:'unit', label:'الوحدة', type:'select', options:['كوز','طن']},
     {key:'itemType', label:'نوع الخرشوف', type:'select', options:['بلدي','فرنساوي','غير ذلك']},
-    {key:'price', label:'السعر', formLabel:'سعر خاص (اختياري)', placeholder:'فاضي = سعر الأسبوع', type:'number',
+    {key:'price', label:'السعر', formLabel:'سعر خاص (اختياري)', placeholder:'فاضي = سعر الأسبوع', type:'number', optional:true,
       render:(row, person)=>{
         const q = parseFloat(row.kuz)||0; const t = calcJalabEntry(row, getPriceSetForDate(db,row.date), person);
         if(isMissingPrice(row, t)) return <span className="text-rust font-bold">بدون سعر</span>;
@@ -2044,8 +2108,10 @@ function tradeColumns(db, mode, extra=[]){
     ];
     if(!isGreen) cols.push({key:'grade', label:'الدرجة', type:'select', options:['درجة أولى', 'درجة ثانية']});
     cols.push(
-      {key:'quantity', label: isGreen ? 'الكمية (كوز)' : 'الكمية (كيلو)', type:'number', required:true},
-      {key:'price', label:'السعر', formLabel: isGreen ? 'سعر خاص للكوز (اختياري)' : 'سعر خاص للكيلو (اختياري)', placeholder:'فاضي = السعر المتسجل', type:'number',
+      {key:'quantity', label:'الكمية', formLabel: isGreen ? 'الكمية (كوز)' : 'الكمية (كيلو)', type:'number', required:true,
+        render:row=>row.quantity===''||row.quantity==null?'—':num(row.quantity)+' '+(isGreenKind(row.kind)?'كوز':'كيلو'),
+        pdf:row=>row.quantity===''||row.quantity==null?'—':num(row.quantity)+' '+(isGreenKind(row.kind)?'كوز':'كيلو')},
+      {key:'price', label:'السعر', formLabel: isGreen ? 'سعر خاص للكوز (اختياري)' : 'سعر خاص للكيلو (اختياري)', placeholder:'فاضي = السعر المتسجل', type:'number', optional:true,
         render:(row, person)=>{
           const d = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, mode);
           if(d.missingPrice) return <span className="text-rust font-bold">بدون سعر</span>;
@@ -2054,11 +2120,11 @@ function tradeColumns(db, mode, extra=[]){
         pdf:(row, person)=>{ const d = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, mode); return d.missingPrice ? 'بدون سعر' : num(d.price); }
       }
     );
-    if(!isGreen) cols.push({key:'discount', label:'الخصم %', formLabel:'خصم خاص % (اختياري)', type:'number',
+    if(!isGreen) cols.push({key:'discount', label:'الخصم %', formLabel:'خصم خاص % (اختياري)', type:'number', optional:true,
       render:(row, person)=>{ const d = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, mode); return d.disc ? num(d.disc)+'%' : '—'; },
       pdf:(row, person)=>{ const d = getEntryPricingDetails(row, getPriceSetForDate(db, row.date), person, mode); return d.isGreen ? '—' : (d.disc ? fmtNum(d.disc)+'%' : '—'); }
     });
-    if(mode==='purchase') cols.push({key:'note', label:'ملاحظة', type:'text'});
+    if(mode==='purchase') cols.push({key:'note', label:'ملاحظة', formLabel:'ملاحظة (اختياري)', type:'text', optional:true});
     return [...cols, ...extra];
   };
 }
@@ -2087,8 +2153,8 @@ function SalesPage({db}){
   const [equipment,setEquipment] = useState([]);
   useEffect(()=>{ apiFetch('/api/equipment').then(eq=>setEquipment(eq.map(x=>({id:x.id, type:x.type})))).catch(()=>{}); }, []);
   const equipCols = equipment.length ? [
-    {key:'equipItem', label:'عدة طالعة مع الكارتة', type:'select', formOnly:true, options:[{value:'none', label:'من غير عدة'}, ...equipment.map(x=>({value:x.id, label:x.type}))]},
-    {key:'equipQty', label:'عددها', type:'number', formOnly:true},
+    {key:'equipItem', label:'عدة طالعة مع الكارتة', type:'select', formOnly:true, optional:true, options:[{value:'none', label:'من غير عدة'}, ...equipment.map(x=>({value:x.id, label:x.type}))]},
+    {key:'equipQty', label:'عدد العدة', type:'number', formOnly:true, optional:true},
   ] : [];
   async function afterAddEntry(person, form){
     if(!form.equipItem || form.equipItem==='none' || !(parseFloat(form.equipQty)>0)) return;
@@ -2130,7 +2196,7 @@ function SakinaPage({db}){
   }
   const entryColumns = [
     {key:'itemType', label:'الصنف', type:'select', options:['هارت','كاسات','حشو']},
-    {key:'pieces', label:'عدد القطع', type:'number', required:true},
+    {key:'pieces', label:'عدد القطع', type:'number', required:true, render:row=>row.pieces===''||row.pieces==null?'—':num(row.pieces)+' قطعة'},
     {key:'tookPeel', label:'أخدت القشر', type:'checkbox'},
   ];
   const sakina = sakinas.find(s=>s.id===selectedSakina) || null;
@@ -2139,7 +2205,7 @@ function SakinaPage({db}){
   return (
     <div className="p-4 md:p-8">
       <VerseHeader text="﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَى أَهْلِهَا﴾"/>
-      <h1 className="font-display text-3xl text-leaf-deep mb-1 flex items-center gap-2"><Icon name="leaf" className="w-7 h-7"/>النوالات</h1>
+      <h1 className="hidden md:flex font-display text-3xl text-leaf-deep mb-1 items-center gap-2"><Icon name="leaf" className="w-7 h-7"/>النوالات</h1>
       <p className="text-ink/70 text-sm mb-5">كل نوالة مكان تقشير ليه عاملاته. السعر لكل ١٠٠٠ قطعة من صفحة «التسعير».</p>
       <div className="flex items-center gap-2 flex-wrap mb-5">
         {sakinas.map(s=>(
@@ -2171,16 +2237,18 @@ function TakhritPage({db}){
   const entryColumns = [
     {key:'barrelType', label:'شكل التخريط', type:'select', options:['قطع','قرص','شرايح','حدوة']},
     {key:'barrels', label:'عدد البراميل', type:'number', required:true},
-    {key:'price', label:'سعر البرميل', formLabel:'سعر خاص للبرميل (اختياري)', placeholder:'فاضي = سعر الأسبوع', type:'number',
+    {key:'price', label:'سعر البرميل', formLabel:'سعر خاص للبرميل (اختياري)', placeholder:'فاضي = سعر الأسبوع', type:'number', optional:true,
       render:(row)=>{ const t = calcTakhritEntry(row, getPriceSetForDate(db,row.date)); const q = parseFloat(row.barrels)||0; if(isMissingPrice(row,t)) return <span className="text-rust font-bold">بدون سعر</span>; return <span className="num">{toNum(row.price)!==null && priceTag('يدوي','bg-gold/15 text-gold-dark')}{num(q?t/q:0)}</span>; },
       pdf:(row)=>{ const t = calcTakhritEntry(row, getPriceSetForDate(db,row.date)); const q = parseFloat(row.barrels)||0; return isMissingPrice(row,t)?'بدون سعر':num(q?t/q:0); }},
   ];
   const common = { entryColumns, calcEntryTotal: calcTakhritEntry, db, personType:'takhrit', entryLabel:'عمليات التخريط', personLabel:'نفر', icon:'blade', verse:'﴿إِنَّ اللَّهَ يَأْمُرُ بِالْعَدْلِ وَالْإِحْسَانِ﴾', weeklyGrouping:true };
   return (
     <div>
-      <div className="px-4 md:px-8 pt-5 flex gap-2">
-        <button onClick={()=>setTab('fixed')} className={`px-4 py-2.5 rounded-t-xl text-sm font-bold ${tab==='fixed'?'bg-white text-leaf-deep':'bg-creamdark text-ink/65'}`}>أنفار التخريط الثابتين</button>
-        <button onClick={()=>setTab('banadeer')} className={`px-4 py-2.5 rounded-t-xl text-sm font-bold ${tab==='banadeer'?'bg-white text-leaf-deep':'bg-creamdark text-ink/65'}`}>البنادير</button>
+      <div className="px-4 md:px-8 pt-4">
+        <div className="grid grid-cols-2 gap-1 bg-creamdark/70 p-1 rounded-2xl max-w-sm">
+          <button onClick={()=>setTab('fixed')} aria-pressed={tab==='fixed'} className={`py-2.5 rounded-xl text-sm font-bold ${tab==='fixed'?'bg-white text-leaf-deep shadow-sm':'text-ink/65'}`}>أنفار التخريط</button>
+          <button onClick={()=>setTab('banadeer')} aria-pressed={tab==='banadeer'} className={`py-2.5 rounded-xl text-sm font-bold ${tab==='banadeer'?'bg-white text-leaf-deep shadow-sm':'text-ink/65'}`}>البنادير</button>
+        </div>
       </div>
       {tab==='fixed'
         ? <ConnectedPersonPage key="fixed" title="أنفار التخريط الثابتين" {...common} remote={makePersonRemote('takhrit-fixed', SECTION_FIELDS.takhrit)}/>
@@ -2193,7 +2261,7 @@ function WorkersPage({db}){
   const entryColumns = [
     {key:'present', label:'حاضر', type:'checkbox', defaultChecked:true},
     {key:'performance', label:'الأداء', type:'select', options:['كويس','ممتاز','ضعيف']},
-    {key:'note', label:'ملاحظة', type:'text'},
+    {key:'note', label:'ملاحظة', formLabel:'ملاحظة (اختياري)', type:'text', optional:true},
   ];
   return <ConnectedPersonPage title="أنفار النوالة" icon="user" personLabel="نفر" entryLabel="أيام الشغل"
     verse="﴿وَقُلِ اعْمَلُوا فَسَيَرَى اللَّهُ عَمَلَكُمْ وَرَسُولُهُ وَالْمُؤْمِنُونَ﴾"
@@ -2245,12 +2313,12 @@ function ExpensesPage({db, setDb}){
     {key:'name', label:'وصف', type:'text'},
     {key:'amount', label:'المبلغ', type:'number', isTotal:true},
   ];
-  const tabBtn = (k, l) => <button onClick={()=>setTab(k)} className={`px-4 py-2.5 rounded-t-xl text-sm font-bold ${tab===k?'bg-white text-leaf-deep':'bg-creamdark text-ink/65'}`}>{l}</button>;
+  const tabBtn = (k, l) => <button onClick={()=>setTab(k)} aria-pressed={tab===k} className={`py-2.5 rounded-xl text-sm font-bold ${tab===k?'bg-white text-leaf-deep shadow-sm':'text-ink/65'}`}>{l}</button>;
   return (
     <div className="p-4 md:p-8 space-y-5">
       <VerseHeader text="﴿وَلَا تُبَذِّرْ تَبْذِيرًا﴾"/>
-      <h1 className="font-display text-3xl text-leaf-deep flex items-center gap-2"><Icon name="wallet" className="w-7 h-7"/>المصاريف والعربيات والشركاء</h1>
-      <div className="flex gap-2 flex-wrap">{tabBtn('expenses','المصاريف')}{tabBtn('transport','العربيات')}{tabBtn('partners','الشركاء')}</div>
+      <h1 className="hidden md:flex font-display text-3xl text-leaf-deep items-center gap-2"><Icon name="wallet" className="w-7 h-7"/>المصاريف والعربيات والشركاء</h1>
+      <div className="grid grid-cols-3 gap-1 bg-creamdark/70 p-1 rounded-2xl max-w-md">{tabBtn('expenses','المصاريف')}{tabBtn('transport','العربيات')}{tabBtn('partners','الشركاء')}</div>
       {tab==='expenses' && (loading ? <LoadingBox/> : error ? <ErrorBox error={error} onRetry={load}/> :
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 max-w-md">
@@ -2303,10 +2371,10 @@ function TransportSection({db, setDb}){
   const entryColumns = [
     {key:'fromLocation', label:'من', type:'select', options:locationOptions},
     {key:'toLocation', label:'إلى', type:'select', options:locationOptions},
-    {key:'price', label:'سعر المشوار', formLabel:'سعر خاص (اختياري)', placeholder:'فاضي = سعر المشوار الثابت', type:'number',
+    {key:'price', label:'سعر المشوار', formLabel:'سعر خاص (اختياري)', placeholder:'فاضي = سعر المشوار الثابت', type:'number', optional:true,
       render:(row)=>{ const t = calcTransportEntry(row, getPriceSetForDate(db,row.date)); if(isMissingPrice(row,t)) return <span className="text-rust font-bold">بدون سعر</span>; return <span className="num">{row.priceManual && priceTag('خاص','bg-gold/15 text-gold-dark')}{num(t)}</span>; },
       pdf:(row)=>{ const t = calcTransportEntry(row, getPriceSetForDate(db,row.date)); return isMissingPrice(row,t)?'بدون سعر':num(t); }},
-    {key:'note', label:'ملاحظة', type:'text'},
+    {key:'note', label:'ملاحظة', formLabel:'ملاحظة (اختياري)', type:'text', optional:true},
   ];
   const base = makePersonRemote('transport', SECTION_FIELDS.transport);
   const withManual = f => ({...f, priceManual: toNum(f.price) !== null});
@@ -2476,7 +2544,7 @@ function DebtsPage(){
   return (
     <div className="p-4 md:p-8 space-y-5">
       <VerseHeader text="﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَى أَهْلِهَا﴾"/>
-      <h1 className="font-display text-3xl text-leaf-deep flex items-center gap-2"><Icon name="debt" className="w-7 h-7"/>المديونات</h1>
+      <h1 className="hidden md:flex font-display text-3xl text-leaf-deep items-center gap-2"><Icon name="debt" className="w-7 h-7"/>المديونات</h1>
       <p className="text-ink/70 text-sm">فلوس استلفتها خلال الموسم. المديونات بتترحّل للموسم الجاي لحد ما تتسدد.</p>
       <div className="max-w-xs"><StatCard label="الباقي عليك من المديونات" value={money(totalOutstanding)} icon="debt" tone={totalOutstanding>0?'rust':'white'}/></div>
       <div className="bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4">
@@ -2610,7 +2678,7 @@ function EquipmentPage(){
   return (
     <div className="p-4 md:p-8">
       <VerseHeader text="﴿وَأَقِيمُوا الْوَزْنَ بِالْقِسْطِ وَلَا تُخْسِرُوا الْمِيزَانَ﴾"/>
-      <h1 className="font-display text-3xl text-leaf-deep mb-1 flex items-center gap-2"><Icon name="box" className="w-7 h-7"/>العدة</h1>
+      <h1 className="hidden md:flex font-display text-3xl text-leaf-deep mb-1 items-center gap-2"><Icon name="box" className="w-7 h-7"/>العدة</h1>
       <p className="text-ink/70 text-sm mb-5">البراميل والأقفاص والصواني والسكاكين: اللي عند المصانع، واللي عند النوالات، واللي في المخزن.</p>
       <div className="flex flex-col lg:flex-row gap-5">
         <div className="lg:w-72 shrink-0 bg-white rounded-2xl shadow-card border border-leaf-line/30 p-4 h-fit space-y-3">
@@ -2797,16 +2865,16 @@ function PricingPage({db,setDb}){
   const log = auditRead().filter(a=>a.section==='التسعير').slice(0, 40);
   const scopeLabel = a => { const s = (a.after||a.before||{}); return s.scope==='season' ? 'التسعير الموسمي' : s.scope==='day' ? 'يوم '+formatDateShort(s.week_start) : s.scope==='lock' ? ((s.prices&&s.prices.locked===false)?'فتح ':'قفل ')+'أسبوع '+getWeekRangeLabel(s.week_start) : 'أسبوع '+getWeekRangeLabel(normalizeWeekStart(s.week_start)); };
   const srcCls = src.kind==='saved' ? 'bg-leaf-pale text-leaf-deep border-leaf-line' : src.kind==='carry' ? 'bg-gold/15 text-gold-dark border-gold/40' : 'bg-rust/10 text-rust border-rust/30';
-  const tabBtn = (m, l) => <button onClick={()=>setMode(m)} className={`px-4 py-2.5 rounded-t-xl text-sm font-bold ${mode===m?'bg-white text-leaf-deep':'bg-creamdark text-ink/65'}`}>{l}</button>;
-  const card = "bg-white rounded-3xl shadow-card border border-leaf-line/30 p-5 md:p-6";
+  const tabBtn = (m, l) => <button onClick={()=>setMode(m)} aria-pressed={mode===m} className={`py-2.5 rounded-xl text-sm font-bold transition ${mode===m?'bg-white text-leaf-deep shadow-sm':'text-ink/65'}`}>{l}</button>;
+  const card = "bg-white rounded-3xl shadow-card border border-leaf-line/30 p-4 md:p-6";
   const inp = "w-full rounded-xl border border-leaf-line/70 px-3 py-2.5 num bg-white";
 
   return (
     <div className="p-4 md:p-8 space-y-5 max-w-4xl mx-auto">
       <VerseHeader text="﴿وَأَوْفُوا الْكَيْلَ وَلَا تَكُونُوا مِنَ الْمُخْسِرِينَ﴾"/>
-      <h1 className="font-display text-3xl text-leaf-deep flex items-center gap-2"><Icon name="tag" className="w-7 h-7"/>التسعير</h1>
-      <p className="text-sm text-ink/75">الأولوية: <b>تسعير اليوم ← تسعير الأسبوع ← آخر أسبوع متسعّر قبله ← الموسمي</b>. أي تعديل بيتطبق على كل عمليات الفترة دي (الكشوف القديمة والربح).</p>
-      <div className="flex gap-2 flex-wrap">{tabBtn('weekly','تسعير أسبوعي')}{tabBtn('daily','تسعير يومي')}{tabBtn('seasonal','تسعير موسمي')}</div>
+      <h1 className="hidden md:flex font-display text-3xl text-leaf-deep items-center gap-2"><Icon name="tag" className="w-7 h-7"/>التسعير</h1>
+      <details className="text-sm text-ink/75 bg-white/60 rounded-2xl px-4 py-2"><summary className="cursor-pointer font-bold text-leaf-deep py-1">إزاي الأسعار بتتطبق؟</summary><p className="pb-2">الأولوية: <b>تسعير اليوم ← تسعير الأسبوع ← آخر أسبوع متسعّر قبله ← الموسمي</b>. أي تعديل بيتطبق على كل عمليات الفترة دي (الكشوف القديمة والربح).</p></details>
+      <div className="grid grid-cols-3 gap-1 bg-creamdark/70 p-1 rounded-2xl max-w-md">{tabBtn('weekly','أسبوعي')}{tabBtn('daily','يومي')}{tabBtn('seasonal','موسمي')}</div>
 
       <div className={card+" space-y-3"}>
         {mode==='weekly' && (
@@ -2885,8 +2953,8 @@ function PricingPage({db,setDb}){
         <label className="block max-w-[180px]"><span className="block text-xs text-ink/70 mb-1">اليومية</span><input type="number" inputMode="decimal" value={draft.workerDailyWage} onChange={e=>set(['workerDailyWage'], e.target.value)} className={inp}/></label>
       </div>
 
-      <div className="sticky bottom-3 z-10">
-        <button onClick={save} className="bg-leaf-deep text-cream rounded-2xl px-8 py-4 font-black flex items-center justify-center gap-3 w-full sm:w-auto shadow-card-hover text-lg">
+      <div className="sticky bottom-[72px] md:bottom-3 z-10 -mx-1 px-1 py-2 bg-cream/90 backdrop-blur rounded-2xl">
+        <button onClick={save} className="bg-leaf-deep text-cream rounded-2xl px-8 py-3.5 font-black flex items-center justify-center gap-3 w-full sm:w-auto shadow-card-hover text-base md:text-lg">
           <Icon name="check" className="w-5 h-5"/>{mode==='seasonal'?'حفظ التسعير الموسمي':mode==='daily'?'حفظ أسعار اليوم ده':'حفظ أسعار الأسبوع ده'}
         </button>
       </div>
@@ -2925,7 +2993,7 @@ function PricingPage({db,setDb}){
               const lines = (a.after&&a.after.scope==='lock') ? [] : priceChangeLines(a.before&&a.before.prices, a.after&&a.after.prices);
               return (
                 <div key={a.id} className="border border-leaf-line/30 rounded-xl px-3 py-2 text-sm">
-                  <div className="flex justify-between gap-2 flex-wrap"><b>{scopeLabel(a)}</b><span className="text-xs text-ink/60">{new Date(a.at).toLocaleString('ar-EG')}</span></div>
+                  <div className="flex justify-between gap-2 flex-wrap"><b>{scopeLabel(a)}</b><span className="text-xs text-ink/60">{new Date(a.at).toLocaleString('ar-EG-u-nu-latn')}</span></div>
                   {lines.length>0 && <ul className="text-xs text-ink/75 mt-1 space-y-0.5">{lines.slice(0,12).map((l,i)=><li key={i}>{l}</li>)}{lines.length>12 && <li>و {lines.length-12} تعديل تاني</li>}</ul>}
                   {!a.before && a.after && a.after.scope!=='lock' && <div className="text-xs text-ink/60 mt-1">أول تسعير للفترة دي</div>}
                 </div>
@@ -3071,7 +3139,13 @@ function Dashboard({db, user, setUser, setPage}){
         <StatCard big label="عليك للناس" value={money(o.payables)} icon="debt" tone="rust" sub={`جلابة ${fmtNum(g.jalaba.owedToThem)} · رصيف ${fmtNum(g.raseef.owedToThem)} · مديونات ${fmtNum(o.debtsOutstanding)}`}/>
       </div>
 
-      <div className="bg-white/80 rounded-[2rem] shadow-card border border-white p-5 md:p-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[['jalaba','سجّل توريد جلاب','truck'],['sales','سجّل كارتة مبيعات','receipt'],['sakina','سجّل تقشير','leaf'],['pricing','أسعار الأسبوع','tag']].map(([k,l,ic])=>(
+          <button key={k} onClick={()=>{ setPage(k); window.scrollTo(0,0); }} className="bg-white/80 border border-white rounded-2xl px-3 py-3 text-sm font-bold text-leaf-deep flex items-center gap-2 shadow-card hover:bg-white"><Icon name={ic} className="w-5 h-5 shrink-0"/>{l}</button>
+        ))}
+      </div>
+
+      <div className="bg-white/80 rounded-[2rem] shadow-card border border-white p-4 md:p-7">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-5">
           <h3 className="font-bold text-xl text-leaf-deep">أسبوع {getWeekRangeLabel(ws)}</h3>
           <div className="flex items-center gap-2">
@@ -3082,12 +3156,15 @@ function Dashboard({db, user, setUser, setPage}){
         </div>
         <div className="space-y-3">
           {rows.map((r,i)=>(
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-32 sm:w-44 shrink-0 text-sm text-ink/80 font-bold">{r.label}</div>
-              <div className="flex-1 bg-cream rounded-full h-3.5 overflow-hidden">
+            <div key={i} className="md:flex md:items-center md:gap-3">
+              <div className="flex items-center justify-between md:block md:w-44 shrink-0 text-sm text-ink/80 font-bold">
+                <span>{r.label}</span>
+                <span className={`md:hidden num ${!r.value?'text-ink/50':r.sign==='+'?'text-leaf-mid':'text-rust'}`}>{r.value ? (r.sign==='-'?num(-r.value):num(r.value)) : num(0)}</span>
+              </div>
+              <div className="flex-1 bg-cream rounded-full h-2.5 md:h-3.5 overflow-hidden mt-1 md:mt-0">
                 <div className={`h-full rounded-full ${r.sign==='+'?'bg-leaf-bright':'bg-gold'}`} style={{width: (r.value/maxVal*100)+'%'}}/>
               </div>
-              <div className={`w-24 text-left text-sm font-bold num ${!r.value?'text-ink/50':r.sign==='+'?'text-leaf-mid':'text-rust'}`}>{r.value ? (r.sign==='-'?num(-r.value):num(r.value)) : num(0)}</div>
+              <div className={`hidden md:block w-24 text-left text-sm font-bold num ${!r.value?'text-ink/50':r.sign==='+'?'text-leaf-mid':'text-rust'}`}>{r.value ? (r.sign==='-'?num(-r.value):num(r.value)) : num(0)}</div>
             </div>
           ))}
         </div>
@@ -3174,7 +3251,7 @@ function SettingsPage({db, user, setUser}){
     try{
       const obj = JSON.parse(await f.text());
       if(!obj || obj.app!=='nawalty') throw new Error('الملف ده مش نسخة احتياطية من نوالتي');
-      if(!(await askConfirm(`استرجاع نسخة ${new Date(obj.exportedAt).toLocaleString('ar-EG')}؟\nكل البيانات اللي على الجهاز دلوقتي هتتشال وتتحط مكانها النسخة دي. هنزّل نسخة من البيانات الحالية الأول احتياطي.`, {danger:true, confirmText:'استرجع'}))) return;
+      if(!(await askConfirm(`استرجاع نسخة ${new Date(obj.exportedAt).toLocaleString('ar-EG-u-nu-latn')}؟\nكل البيانات اللي على الجهاز دلوقتي هتتشال وتتحط مكانها النسخة دي. هنزّل نسخة من البيانات الحالية الأول احتياطي.`, {danger:true, confirmText:'استرجع'}))) return;
       downloadBackup('قبل-الاسترجاع-'+todayStr());
       restoreBackup(obj);
       notify('اترجعت النسخة — بيفتح من جديد...');
@@ -3250,7 +3327,7 @@ function SettingsPage({db, user, setUser}){
 
   return (
     <div className="p-4 md:p-8 space-y-5 max-w-3xl mx-auto">
-      <h1 className="font-display text-3xl text-leaf-deep flex items-center gap-2"><Icon name="gear" className="w-7 h-7"/>الإعدادات والنسخ الاحتياطي</h1>
+      <h1 className="hidden md:flex font-display text-3xl text-leaf-deep items-center gap-2"><Icon name="gear" className="w-7 h-7"/>الإعدادات والنسخ الاحتياطي</h1>
 
       <div className={card}>
         <h3 className="font-bold text-leaf-deep mb-1">النسخة الاحتياطية</h3>
@@ -3307,7 +3384,7 @@ function SettingsPage({db, user, setUser}){
                 <b>{a.section}</b>{a.owner ? ' — '+a.owner : ''}
                 <div className="text-xs text-ink/70 break-words">{describe(a)}</div>
               </div>
-              <span className="text-[11px] text-ink/60 shrink-0">{new Date(a.at).toLocaleString('ar-EG', {day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
+              <span className="text-[11px] text-ink/60 shrink-0">{new Date(a.at).toLocaleString('ar-EG-u-nu-latn', {day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit'})}</span>
             </div>
           ))}
         </div>
@@ -3394,10 +3471,11 @@ function App(){
       <Sidebar page={page} setPage={setPage} user={user.name} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen}
         onLock={hasPin ? ()=>setLocked(true) : null}
         onLogout={!LOCAL_MODE ? ()=>{ setToken(null); setUser(null); setDb(emptyDB()); setPage('dashboard'); } : null}/>
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 pb-24 md:pb-0">
         <Topbar title={titleMap[page]} setMobileOpen={setMobileOpen} setPage={setPage}/>
         <div key={page}>{content}</div>
       </main>
+      <BottomNav page={page} setPage={setPage} setMobileOpen={setMobileOpen}/>
     </div>
   );
 }
