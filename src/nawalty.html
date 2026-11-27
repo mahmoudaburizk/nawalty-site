@@ -567,9 +567,9 @@ function buildDemoData(){
   const factories = factoryDefs.map(([name, disc, green])=>{
     const entries = allDays.filter(()=>rnd()<(green?0.35:0.45)).map(d=> green
       ? { id:id('s'), entry_date:d, kind:'أخضر', item_type: pick(['بلدي','فرنساوي']), grade:null, quantity: between(800,2500,100), price:null, discount:null }
-      : { id:id('s'), entry_date:d, kind:'مصنع', item_type: pick(['قطع','قطع','قرص','شرايح','كاسات','حدوة','حشو']), grade: rnd()<0.75?'درجة أولى':'درجة ثانية', quantity: between(80,320,10), price:null, discount:null });
+      : { id:id('s'), entry_date:d, kind:'مصنع', item_type: pick(['قطع','قطع','قرص','شرايح','كاسات','حدوة','حشو']), grade: rnd()<0.75?'درجة أولى':'درجة ثانية', quantity: between(150,450,10), price:null, discount:null });
     const weeklyPrices = disc ? [{ weekStart: weeks[0], prices:{}, discount: disc }] : [];
-    return { id:id('f'), name, opening_balance:0, weeklyPrices, entries, payments: weeklyPays(green ? 9000 : 25000, 0.8, 'تحويل') };
+    return { id:id('f'), name, opening_balance:0, weeklyPrices, entries, payments: weeklyPays(green ? 9000 : 45000, 0.8, 'تحويل') };
   });
 
   const raseef = [
@@ -586,8 +586,8 @@ function buildDemoData(){
   const sakinaKeys = {};
   sakinas.forEach((sk, i)=>{
     sakinaKeys['sakina_workers_'+sk.id] = sakinaWorkers[i].map(name=>({ id:id('w'), name, opening_balance:0,
-      entries: allDays.filter(()=>rnd()<0.6).map(d=>({ id:id('e'), entry_date:d, item_type: pick(['هارت','هارت','كاسات','حشو']), pieces: between(2000,8000,100), took_peel: rnd()<0.3 })),
-      payments: weeklyPays(3000, 0.9, '') }));
+      entries: allDays.filter(()=>rnd()<0.6).map(d=>({ id:id('e'), entry_date:d, item_type: pick(['هارت','هارت','كاسات','حشو']), pieces: between(1000,3500,100), took_peel: rnd()<0.3 })),
+      payments: weeklyPays(1300, 0.9, '') }));
   });
 
   const takhritPerson = name => ({ id:id('t'), name, opening_balance:0,
@@ -1371,7 +1371,6 @@ function Topbar({title, setMobileOpen, setPage}){
         </button>
         <h2 className="font-display text-2xl text-leaf-deep md:hidden truncate">{title}</h2>
         <div className="flex items-center gap-3">
-          {LOCAL_MODE && <span title="البيانات بتتحفظ على المتصفح ده بس" className="hidden sm:inline text-xs font-bold px-3 py-1 rounded-full bg-gold/20 text-gold-dark border border-gold/40">محفوظ على الجهاز ده</span>}
           <div className="hidden md:block text-sm text-ink/65">{new Date().toLocaleDateString('ar-EG-u-nu-latn',{weekday:'long', year:'numeric', month:'long', day:'numeric'})}</div>
         </div>
       </div>
@@ -1412,7 +1411,7 @@ function StatCard({label, value, icon, tone="leaf", sub, big}){
     white: "bg-white/80 text-ink border border-white"
   };
   return (
-    <div className={`rounded-3xl md:rounded-[2rem] ${big?'p-5 md:p-7':'p-4 md:p-5'} flex items-center justify-between gap-3 shadow-card rise ${tones[tone]}`}>
+    <div className={`rounded-3xl ${big?'p-6 md:p-7':'p-4 md:p-5'} flex items-center justify-between gap-3 rise ${tones[tone]}`}>
       <div className="min-w-0">
         <div className={`text-sm mb-1.5 font-bold ${tone==='white'?'text-ink/75':'opacity-90'}`}>{label}</div>
         <div className={`${big?'text-2xl md:text-[26px] xl:text-3xl':'text-xl md:text-2xl'} font-bold num whitespace-nowrap`}>{value}</div>
@@ -1427,19 +1426,19 @@ function CapitalCard({capital, onSave}){
   const [editing,setEditing]=useState(false);
   const [val,setVal]=useState(capital);
   return (
-    <div className="bg-white/80 rounded-[2rem] p-5 shadow-card border border-white flex items-center justify-between gap-3">
-      <div className="flex-1">
-        <div className="text-sm mb-1.5 font-bold text-ink/75">رأس المال في بداية الموسم</div>
+    <div className="bg-white rounded-3xl p-5 md:p-6 flex items-center justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="text-sm text-ink/60 mb-1">رأس المال</div>
         {editing ? (
           <div className="flex items-center gap-2">
             <input type="number" inputMode="decimal" value={val} onChange={e=>setVal(e.target.value)} className="border border-leaf-line rounded-xl px-3 py-2 w-36 num"/>
             <button onClick={()=>{onSave(parseFloat(val)||0); setEditing(false);}} className="text-leaf-mid p-2" aria-label="حفظ رأس المال"><Icon name="check" className="w-5 h-5"/></button>
           </div>
         ) : (
-          <div className="text-2xl font-bold num text-ink">{money(capital)}</div>
+          <div className="text-lg md:text-2xl font-bold num text-ink whitespace-nowrap">{money(capital)}</div>
         )}
       </div>
-      {!editing && <button onClick={()=>{setVal(capital); setEditing(true);}} className="text-ink/60 hover:text-leaf-deep p-3 bg-cream rounded-full" aria-label="تعديل رأس المال"><Icon name="edit" className="w-5 h-5"/></button>}
+      {!editing && <button onClick={()=>{setVal(capital); setEditing(true);}} className="text-ink/40 hover:text-leaf-deep p-2 rounded-full" aria-label="تعديل رأس المال"><Icon name="edit" className="w-4 h-4"/></button>}
     </div>
   );
 }
@@ -3233,7 +3232,6 @@ function Dashboard({db, user, setUser, setPage}){
   const [data,setData] = useState(null);
   const [error,setError] = useState('');
   const [ws,setWs] = useState(getWeekStart(todayStr()));
-  const [phone,setPhone] = useState(user.owner_phone||'');
   const [showDetails,setShowDetails] = useState(false);
   useEffect(()=>{ load(); }, []);
   async function load(){ setError(''); try{ setData(await loadAllData()); }catch(e){ setError(e.message); } }
@@ -3255,7 +3253,6 @@ function Dashboard({db, user, setUser, setPage}){
     {label:'العربيات', value:g.transport.earnedWeek, sign:'-'},
     {label:'مصاريف النوالة', value:o.expensesWeek, sign:'-'},
   ];
-  const maxVal = Math.max(1, ...rows.map(r=>r.value));
   const flow = flowForWeek(data, ws);
   const prevWs = (()=>{ const d = new Date(ws+'T00:00:00'); d.setDate(d.getDate()-7); return localDateStr(d); })();
   const prevFlow = flowForWeek(data, prevWs);
@@ -3266,126 +3263,109 @@ function Dashboard({db, user, setUser, setPage}){
     rows.forEach(r=>lines.push(`${r.label}: ${r.sign}${fmtNum(r.value)}`));
     lines.push('', 'صافي ربح الأسبوع: '+fmtNum(o.weekProfit));
     lines.push('', 'السيولة: '+fmtNum(o.cash), 'ليك عند الناس: '+fmtNum(o.receivables), 'عليك للناس: '+fmtNum(o.payables));
-    waShare(lines.join('\n'), phone || user.owner_phone);
+    waShare(lines.join('\n'), user.owner_phone);
   }
   const empty = !OVERVIEW_GROUPS.some(x=>(data[x.key]||[]).length) && !data.expenses.length;
-  const partners = data.partnersList.filter(p=>parseFloat(p.share)>0);
   const fmtRatio = r => r===null ? '—' : fmtNum(r);
+  const isThisWeek = ws === getWeekStart(todayStr());
 
   return (
-    <div className="p-4 md:p-8 space-y-5">
-      <VerseHeader text="﴿وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا * وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ﴾"/>
-      <h1 className="font-display text-3xl text-leaf-deep">أهلاً {user.name||''}</h1>
+    <div className="px-5 py-6 md:px-10 md:py-10 max-w-5xl mx-auto space-y-8 md:space-y-10">
+      <header className="space-y-2">
+        <p className="font-quran text-leaf-deep/60 text-base md:text-lg">﴿وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا * وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ﴾</p>
+        <h1 className="font-display text-2xl md:text-3xl text-leaf-deep">أهلاً {user.name||''}</h1>
+      </header>
+
       {empty && (
-        <div className="bg-white border border-dashed border-leaf-line rounded-2xl p-6 text-center text-ink/75">
-          <ArtichokeMark className="w-12 h-12 mx-auto mb-2 opacity-80"/>
-          <p className="mb-1 font-bold">لسه مفيش بيانات.</p>
+        <div className="bg-white rounded-3xl p-8 text-center text-ink/75">
+          <ArtichokeMark className="w-12 h-12 mx-auto mb-3 opacity-80"/>
+          <p className="mb-1 font-bold text-ink">لسه مفيش بيانات</p>
           <p className="text-sm">ابدأ بأسعار الأسبوع من <button className="underline text-leaf-mid" onClick={()=>setPage('pricing')}>التسعير</button>، وبعدين سجّل جلاب أو نوالة.</p>
-          <button onClick={()=>{ loadDemoData(); location.reload(); }} className="mt-3 border border-gold/60 text-gold-dark rounded-xl px-4 py-2 text-sm font-bold bg-gold/5">أو جرّب ببيانات تجريبية</button>
+          <button onClick={()=>{ loadDemoData(); location.reload(); }} className="mt-4 text-gold-dark text-sm font-bold underline">أو جرّب ببيانات تجريبية</button>
         </div>
       )}
       {o.missing>0 && (
-        <button onClick={()=>setPage('pricing')} className="w-full text-right bg-rust/10 border border-rust/30 text-rust rounded-2xl px-4 py-3 text-sm font-bold">
-          فيه {o.missing} عملية ملهاش سعر ومش داخلة في الأرقام دي — افتح «التسعير» وحط أسعار الأسابيع دي.
+        <button onClick={()=>setPage('pricing')} className="w-full text-right bg-rust/10 text-rust rounded-2xl px-5 py-3 text-sm font-bold">
+          فيه {o.missing} عملية ملهاش سعر ومش داخلة في الأرقام — حط أسعارها من «التسعير».
         </button>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard big label="السيولة (الكاش دلوقتي)" value={money(o.cash)} icon="coin" tone="leaf" sub="رأس المال + الواصل + الشركاء + المديونات − كل المدفوع والمصاريف"/>
-        <StatCard big label="ليك عند الناس" value={money(o.receivables)} icon="receipt" tone="gold" sub={`المصانع: ${fmtNum(g.factories.owedToUs)}`}/>
-        <StatCard big label="عليك للناس" value={money(o.payables)} icon="debt" tone="rust" sub={`جلابة ${fmtNum(g.jalaba.owedToThem)} · رصيف ${fmtNum(g.raseef.owedToThem)} · مديونات ${fmtNum(o.debtsOutstanding)}`}/>
-      </div>
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        <StatCard big label="السيولة دلوقتي" value={money(o.cash)} icon="coin" tone="leaf"/>
+        <StatCard big label="ليك عند الناس" value={money(o.receivables)} icon="receipt" tone="gold"/>
+        <StatCard big label="عليك للناس" value={money(o.payables)} icon="debt" tone="rust"/>
+      </section>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {[['jalaba','سجّل توريد جلاب','truck'],['sales','سجّل كارتة مبيعات','receipt'],['sakina','سجّل تقشير','leaf'],['pricing','أسعار الأسبوع','tag']].map(([k,l,ic])=>(
-          <button key={k} onClick={()=>{ setPage(k); window.scrollTo(0,0); }} className="bg-white/80 border border-white rounded-2xl px-3 py-3 text-sm font-bold text-leaf-deep flex items-center gap-2 shadow-card hover:bg-white"><Icon name={ic} className="w-5 h-5 shrink-0"/>{l}</button>
-        ))}
-      </div>
-
-      <div className="bg-white/80 rounded-[2rem] shadow-card border border-white p-4 md:p-7">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-5">
-          <h3 className="font-bold text-xl text-leaf-deep">أسبوع {getWeekRangeLabel(ws)}</h3>
-          <div className="flex items-center gap-2">
-            <button onClick={()=>shiftWeek(-1)} className="px-3 py-2 rounded-xl border border-leaf-line text-sm bg-white" aria-label="الأسبوع اللي فات">‹</button>
-            <div className="w-36"><DateInput value={ws} onChange={e=>e.target.value && setWs(getWeekStart(e.target.value))}/></div>
-            <button onClick={()=>shiftWeek(1)} className="px-3 py-2 rounded-xl border border-leaf-line text-sm bg-white" aria-label="الأسبوع الجاي">›</button>
+      <section className="bg-white rounded-3xl p-6 md:p-8">
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-1">
+            <button onClick={()=>shiftWeek(-1)} className="w-9 h-9 rounded-full hover:bg-cream text-ink/60 text-lg" aria-label="الأسبوع اللي فات">‹</button>
+            <h2 className="font-bold text-base md:text-lg text-ink px-1 whitespace-nowrap"><span className="hidden sm:inline">أسبوع </span>{getWeekRangeLabel(ws)}</h2>
+            <button onClick={()=>shiftWeek(1)} className="w-9 h-9 rounded-full hover:bg-cream text-ink/60 text-lg" aria-label="الأسبوع الجاي">›</button>
+            {!isThisWeek && <button onClick={()=>setWs(getWeekStart(todayStr()))} className="text-xs text-leaf-mid font-bold mr-2">الأسبوع ده</button>}
           </div>
+          <button onClick={sendWeekly} className="w-10 h-10 rounded-full text-[#128C7E] hover:bg-[#25D366]/10 flex items-center justify-center" aria-label="ابعت ملخص الأسبوع واتساب" title="ابعت ملخص الأسبوع واتساب"><Icon name="whatsapp" className="w-5 h-5"/></button>
         </div>
-        <div className="space-y-3">
+
+        <div className="text-center mb-7">
+          <div className="text-sm text-ink/60 mb-1">صافي ربح الأسبوع</div>
+          <div className={`font-display text-4xl md:text-5xl num ${o.weekProfit>=0?'text-leaf-deep':'text-rust'}`}>{money(o.weekProfit)}</div>
+        </div>
+
+        <dl className="divide-y divide-leaf-line/20">
           {rows.map((r,i)=>(
-            <div key={i} className="md:flex md:items-center md:gap-3">
-              <div className="flex items-center justify-between md:block md:w-44 shrink-0 text-sm text-ink/80 font-bold">
-                <span>{r.label}</span>
-                <span className={`md:hidden num ${!r.value?'text-ink/50':r.sign==='+'?'text-leaf-mid':'text-rust'}`}>{r.value ? (r.sign==='-'?num(-r.value):num(r.value)) : num(0)}</span>
-              </div>
-              <div className="flex-1 bg-cream rounded-full h-2.5 md:h-3.5 overflow-hidden mt-1 md:mt-0">
-                <div className={`h-full rounded-full ${r.sign==='+'?'bg-leaf-bright':'bg-gold'}`} style={{width: (r.value/maxVal*100)+'%'}}/>
-              </div>
-              <div className={`hidden md:block w-24 text-left text-sm font-bold num ${!r.value?'text-ink/50':r.sign==='+'?'text-leaf-mid':'text-rust'}`}>{r.value ? (r.sign==='-'?num(-r.value):num(r.value)) : num(0)}</div>
+            <div key={i} className="flex items-center justify-between py-3">
+              <dt className="text-ink/75">{r.label}</dt>
+              <dd className={`font-bold num ${!r.value?'text-ink/40':r.sign==='+'?'text-leaf-mid':'text-ink'}`}>{r.value ? (r.sign==='-'?num(-r.value):num(r.value)) : '—'}</dd>
             </div>
           ))}
-        </div>
-        <div className="mt-5 pt-4 border-t border-leaf-line/30 flex items-center justify-between gap-2">
-          <span className="font-bold text-ink text-lg">صافي ربح الأسبوع</span>
-          <span className={`font-display text-3xl ${o.weekProfit>=0?'text-leaf-deep':'text-rust'}`}>{money(o.weekProfit)}</span>
-        </div>
-        <div className="mt-4 flex items-center gap-2 flex-wrap">
-          <label className="text-sm text-ink/75 font-bold">رقم واتساب صاحب النوالة:</label>
-          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="2010xxxxxxxx" dir="ltr" className="rounded-xl border border-leaf-line px-3 py-2 text-sm num bg-white w-44"/>
-          <button onClick={async()=>{ if(await saveNawala({owner_phone: phone})) notify('اتحفظ الرقم'); }} className="text-xs px-3 py-2 rounded-xl border border-leaf-line text-leaf-deep bg-white font-bold">حفظ الرقم</button>
-          <button onClick={sendWeekly} className="text-xs px-3 py-2 rounded-xl border border-[#25D366]/40 text-[#128C7E] bg-white font-bold flex items-center gap-1.5"><Icon name="whatsapp" className="w-4 h-4"/>ابعت ملخص الأسبوع</button>
-        </div>
-      </div>
+        </dl>
+      </section>
 
-      <div className="bg-white/80 rounded-[2rem] shadow-card border border-white p-5 md:p-7">
-        <h3 className="font-bold text-lg text-leaf-deep mb-1">الوارد والمتشغّل والمتباع — أسبوع {getWeekRangeLabel(ws)}</h3>
-        <p className="text-xs text-ink/65 mb-4">عشان تلاحظ الهالك أو أي حمولة ناقصة: قارن الكيلو المتباع بالكوازين الواردة مع الأسبوع اللي فات.</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <div className="bg-cream/70 rounded-2xl p-3"><div className="text-xs text-ink/65 mb-1">وارد (كوز)</div><div className="font-black num text-lg">{num(flow.inKuz)}</div><div className="text-xs text-ink/65">جلابة {fmtNum(flow.jalabKuz)} · رصيف أخضر {fmtNum(flow.raseefGreenKuz)}{flow.jalabTon?` · ${fmtNum(flow.jalabTon)} طن`:''}</div></div>
-          <div className="bg-cream/70 rounded-2xl p-3"><div className="text-xs text-ink/65 mb-1">اتقشّر في النوالات (قطعة)</div><div className="font-black num text-lg">{num(flow.peeledTotal)}</div><div className="text-xs text-ink/65">{Object.entries(flow.peeled).map(([k,v])=>`${k} ${fmtNum(v)}`).join(' · ')||'—'}</div></div>
-          <div className="bg-cream/70 rounded-2xl p-3"><div className="text-xs text-ink/65 mb-1">اتخرّط (برميل)</div><div className="font-black num text-lg">{num(flow.barrelsTotal)}</div><div className="text-xs text-ink/65">{Object.entries(flow.barrels).map(([k,v])=>`${k} ${fmtNum(v)}`).join(' · ')||'—'}</div></div>
-          <div className="bg-cream/70 rounded-2xl p-3"><div className="text-xs text-ink/65 mb-1">اتباع (كيلو)</div><div className="font-black num text-lg">{num(flow.soldKiloTotal)}</div><div className="text-xs text-ink/65">{Object.entries(flow.soldKilo).map(([k,v])=>`${k} ${fmtNum(v)}`).join(' · ')||'—'}{flow.soldGreenKuz?` · أخضر ${fmtNum(flow.soldGreenKuz)} كوز`:''}</div></div>
+      <section className="grid grid-cols-2 gap-4 md:gap-6">
+        <div className="bg-white rounded-3xl p-5 md:p-6">
+          <div className="text-sm text-ink/60 mb-1">ربح الموسم</div>
+          <div className={`text-lg md:text-2xl font-bold num whitespace-nowrap ${o.seasonProfit>=0?'text-leaf-deep':'text-rust'}`}>{money(o.seasonProfit)}</div>
         </div>
-        <div className="mt-3 text-sm flex flex-wrap gap-x-6 gap-y-1">
-          <span>كيلو متباع لكل كوز وارد: <b className="num">{fmtRatio(yieldNow)}</b> <span className="text-ink/60">(الأسبوع اللي فات {fmtRatio(yieldPrev)})</span></span>
-          <span>قطعة متقشرة لكل كوز: <b className="num">{fmtRatio(ratio(flow.peeledTotal, flow.inKuz))}</b></span>
-          {yieldNow!==null && yieldPrev!==null && yieldNow < yieldPrev*0.85 && <span className="text-rust font-bold">الإنتاجية نزلت أكتر من ١٥٪ عن الأسبوع اللي فات — راجع الوارد والهالك.</span>}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CapitalCard capital={o.capital} onSave={v=>saveNawala({capital:v})}/>
-        <StatCard label="ربح الموسم لحد دلوقتي" value={money(o.seasonProfit)} icon="coin" tone={o.seasonProfit>=0?'white':'rust'} sub={`بعد المصاريف (${fmtNum(o.expenses)}) وتكلفة العدة (${fmtNum(o.equipmentCost)})`}/>
-      </div>
+      </section>
 
-      {partners.length>0 && (
-        <div className="bg-white/80 rounded-[2rem] shadow-card border border-white p-5">
-          <h3 className="font-bold text-lg text-leaf-deep mb-3">توزيع ربح الموسم على الشركاء</h3>
-          <div className="overflow-x-auto"><table className="w-full text-sm">
-            <thead><tr className="text-xs text-ink/70"><th className="text-right py-2">الشريك</th><th className="text-right py-2">النسبة</th><th className="text-right py-2">نصيبه من الربح</th><th className="text-right py-2">صافي إيداع/سحب</th><th className="text-right py-2">المستحق له</th></tr></thead>
-            <tbody>{partners.map(p=>{
-              const share = o.seasonProfit * (parseFloat(p.share)||0)/100;
-              const net = data.partnerTx.filter(x=>x.partnerId===p.id).reduce((s,x)=>s+(x.type==='إيداع'?x.amount:-x.amount),0);
-              return <tr key={p.id} className="border-t border-leaf-line/20"><td className="py-2 font-bold">{p.name}</td><td className="py-2 num">{fmtNum(p.share)}%</td><td className="py-2 num">{num(share)}</td><td className="py-2 num">{num(net)}</td><td className="py-2 num font-bold">{num(share+net)}</td></tr>;
-            })}</tbody>
-          </table></div>
-        </div>
-      )}
-
-      <div className="bg-white/80 rounded-[2rem] shadow-card border border-white p-5">
-        <button onClick={()=>setShowDetails(v=>!v)} className="w-full flex items-center justify-between font-bold text-leaf-deep" aria-expanded={showDetails}><span>تفاصيل الموسم حسب كل قسم</span><span className="text-xs text-ink/60">{showDetails?'إخفاء':'عرض'}</span></button>
+      <section>
+        <button onClick={()=>setShowDetails(v=>!v)} className="w-full flex items-center justify-center gap-2 text-sm font-bold text-leaf-mid py-2" aria-expanded={showDetails}>
+          {showDetails ? 'إخفاء التقارير' : 'تقارير أكتر: الوارد والمتباع، وتفاصيل كل قسم'}<span className="text-ink/40">{showDetails?'▲':'▼'}</span>
+        </button>
         {showDetails && (
-          <div className="overflow-x-auto mt-3"><table className="w-full text-sm">
-            <thead><tr className="text-xs text-ink/70"><th className="text-right py-2">القسم</th><th className="text-right py-2">رصيد أول الموسم</th><th className="text-right py-2">القيمة</th><th className="text-right py-2">المدفوع/الواصل</th><th className="text-right py-2">ليك</th><th className="text-right py-2">عليك</th></tr></thead>
-            <tbody>{OVERVIEW_GROUPS.map(x=>{ const r = g[x.key]; return (
-              <tr key={x.key} className="border-t border-leaf-line/20"><td className="py-2 font-bold">{x.label}{r.missing>0 && <span className="text-rust text-xs"> ({r.missing} بدون سعر)</span>}</td><td className="py-2 num">{num(r.opening)}</td><td className="py-2 num">{num(r.earned)}</td><td className="py-2 num">{num(r.paid)}</td><td className="py-2 num text-gold-dark">{num(r.owedToUs)}</td><td className="py-2 num text-rust">{num(r.owedToThem)}</td></tr>
-            ); })}
-            <tr className="border-t border-leaf-line/20"><td className="py-2 font-bold">المصاريف</td><td/><td className="py-2 num">{num(o.expenses)}</td><td className="py-2 num">{num(o.expenses)}</td><td/><td/></tr>
-            <tr className="border-t border-leaf-line/20"><td className="py-2 font-bold">المديونات</td><td/><td/><td/><td/><td className="py-2 num text-rust">{num(o.debtsOutstanding)}</td></tr>
-            </tbody>
-          </table></div>
+          <div className="space-y-6 mt-4">
+            <div className="bg-white rounded-3xl p-6 md:p-8">
+              <h3 className="font-bold text-ink mb-1">الوارد والمتشغّل والمتباع</h3>
+              <p className="text-xs text-ink/60 mb-5">أسبوع {getWeekRangeLabel(ws)} — قارن الكيلو المتباع بالكوازين الواردة عشان تلاحظ الهالك.</p>
+              <dl className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div><dt className="text-xs text-ink/60 mb-1">وارد</dt><dd className="font-bold num text-xl">{num(flow.inKuz)} <span className="text-sm font-normal text-ink/60">كوز</span></dd>{flow.jalabTon ? <dd className="text-xs text-ink/60 num">+ {fmtNum(flow.jalabTon)} طن</dd> : null}</div>
+                <div><dt className="text-xs text-ink/60 mb-1">اتقشّر</dt><dd className="font-bold num text-xl">{num(flow.peeledTotal)} <span className="text-sm font-normal text-ink/60">قطعة</span></dd></div>
+                <div><dt className="text-xs text-ink/60 mb-1">اتخرّط</dt><dd className="font-bold num text-xl">{num(flow.barrelsTotal)} <span className="text-sm font-normal text-ink/60">برميل</span></dd></div>
+                <div><dt className="text-xs text-ink/60 mb-1">اتباع</dt><dd className="font-bold num text-xl">{num(flow.soldKiloTotal)} <span className="text-sm font-normal text-ink/60">كيلو</span></dd>{flow.soldGreenKuz ? <dd className="text-xs text-ink/60 num">+ {fmtNum(flow.soldGreenKuz)} كوز أخضر</dd> : null}</div>
+              </dl>
+              <div className="mt-6 pt-4 border-t border-leaf-line/20 text-sm text-ink/75 flex flex-wrap gap-x-8 gap-y-2">
+                <span>كيلو متباع لكل كوز: <b className="num text-ink">{fmtRatio(yieldNow)}</b> <span className="text-ink/50">(اللي فات {fmtRatio(yieldPrev)})</span></span>
+                {yieldNow!==null && yieldPrev!==null && yieldNow < yieldPrev*0.85 && <span className="text-rust font-bold">الإنتاجية نزلت أكتر من ١٥٪ — راجع الوارد والهالك.</span>}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 md:p-8">
+              <h3 className="font-bold text-ink mb-4">الموسم حسب كل قسم</h3>
+              <div className="overflow-x-auto"><table className="w-full text-sm">
+                <thead><tr className="text-xs text-ink/55"><th className="text-right py-2 font-normal">القسم</th><th className="text-right py-2 font-normal">القيمة</th><th className="text-right py-2 font-normal">المدفوع/الواصل</th><th className="text-right py-2 font-normal">ليك</th><th className="text-right py-2 font-normal">عليك</th></tr></thead>
+                <tbody>{OVERVIEW_GROUPS.map(x=>{ const r = g[x.key]; return (
+                  <tr key={x.key} className="border-t border-leaf-line/15"><td className="py-3">{x.label}</td><td className="py-3 num">{num(r.earned)}</td><td className="py-3 num">{num(r.paid)}</td><td className="py-3 num text-gold-dark">{r.owedToUs?num(r.owedToUs):'—'}</td><td className="py-3 num text-rust">{r.owedToThem?num(r.owedToThem):'—'}</td></tr>
+                ); })}
+                <tr className="border-t border-leaf-line/15"><td className="py-3">المصاريف</td><td className="py-3 num">{num(o.expenses)}</td><td className="py-3 num">{num(o.expenses)}</td><td/><td/></tr>
+                <tr className="border-t border-leaf-line/15"><td className="py-3">المديونات</td><td/><td/><td/><td className="py-3 num text-rust">{num(o.debtsOutstanding)}</td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
@@ -3397,6 +3377,7 @@ function SettingsPage({db, user, setUser}){
   const [pin1,setPin1] = useState(''); const [pin2,setPin2] = useState('');
   const [api,setApi] = useState(API_BASE);
   const [seasonName,setSeasonName] = useState('');
+  const [phone,setPhone] = useState(user.owner_phone||'');
   const fileRef = React.useRef(null);
   const hasPin = !!localStorage.getItem('nawalty_pin');
   const seasons = localStoreGet('seasons', []);
@@ -3521,6 +3502,15 @@ function SettingsPage({db, user, setUser}){
             <tbody>{seasons.slice().reverse().map((s,i)=><tr key={i} className="border-t border-leaf-line/20"><td className="py-1.5 font-bold">{s.name}</td><td className="py-1.5">{formatDateShort(s.closedAt)}</td><td className="py-1.5 num">{num(s.sales)}</td><td className="py-1.5 num">{num(s.profit)}</td><td className="py-1.5 num">{num(s.cash)}</td></tr>)}</tbody>
           </table></div>
         )}
+      </div>
+
+      <div className={card}>
+        <h3 className="font-bold text-leaf-deep mb-1">رقم واتساب صاحب النوالة</h3>
+        <p className="text-sm text-ink/75 mb-3">ملخص الأسبوع من الرئيسية بيتبعت على الرقم ده.</p>
+        <div className="flex gap-2 flex-wrap">
+          <input value={phone} onChange={e=>setPhone(e.target.value)} dir="ltr" placeholder="2010xxxxxxxx" className="rounded-xl border border-leaf-line px-3 py-2.5 text-sm num w-48"/>
+          <button onClick={async()=>{ try{ const u = await apiFetch('/api/nawala', {method:'PUT', body:JSON.stringify({owner_phone: phone.trim()})}); setUser({...user, ...u}); notify('اتحفظ الرقم'); }catch(e){ notify(e.message, {tone:'error'}); } }} className="bg-leaf-deep text-cream rounded-xl px-4 py-2.5 text-sm font-bold">حفظ</button>
+        </div>
       </div>
 
       <div className={card}>
